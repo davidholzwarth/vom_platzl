@@ -44,10 +44,11 @@
   }
 
   // Google Maps Embed API with Directions
-  function getDirectionsEmbedUrl(userLat, userLng) {
+  function getDirectionsEmbedUrl(userLat, userLng, destLat, destLng) {
     // Interactive Google Maps embed with route directions
     // This shows an interactive map with the route displayed
-    return `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_CONFIG.API_KEY}&origin=${userLat},${userLng}&destination=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=${GOOGLE_MAPS_CONFIG.ZOOM_LEVEL}`;
+    const destination = destLat && destLng ? `${destLat},${destLng}` : `${STORE_LATITUDE},${STORE_LONGITUDE}`;
+    return `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_CONFIG.API_KEY}&origin=${userLat},${userLng}&destination=${destination}&mode=walking&zoom=${GOOGLE_MAPS_CONFIG.ZOOM_LEVEL}`;
   }
 
   function getStoreEmbedUrl() {
@@ -123,7 +124,11 @@
     // Generate interactive map embed URL with route
     let embedMapUrl;
     if (userLocation && userLocation.lat && userLocation.lng) {
-      embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng);
+      // Get first place destination if data is available
+      const firstPlace = data && data.places && data.places.length > 0 ? data.places[0] : null;
+      const destLat = firstPlace ? firstPlace.lat : null;
+      const destLng = firstPlace ? firstPlace.lon : null;
+      embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
     } else {
       embedMapUrl = getStoreEmbedUrl();
     }
@@ -704,16 +709,21 @@
     });
   }
   
-  function updateMapWithLocation(userLocation) {
+  function updateMapWithLocation(userLocation, data) {
     if (!userLocation || !userLocation.lat || !userLocation.lng) return;
     
     const iframe = document.querySelector('#vom-platzl-hero-section .vp-iframe');
     if (!iframe) return;
     
-    // Update iframe with directions from user location
-    const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng);
+    // Get first place destination if data is available
+    const firstPlace = data && data.places && data.places.length > 0 ? data.places[0] : null;
+    const destLat = firstPlace ? firstPlace.lat : null;
+    const destLng = firstPlace ? firstPlace.lon : null;
+    
+    // Update iframe with directions from user location to first place
+    const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
     iframe.src = embedMapUrl;
-    console.log("🦁 Vom Platzl: Map updated with user location");
+    console.log("🦁 Vom Platzl: Map updated with user location and first place destination");
   }
 
   function injectStickyHeader() {
@@ -827,6 +837,15 @@
   }
 
   async function getUserLocation() {
+    // Hardcoded location for testing
+    return {
+      lat: 48.149940170589154,
+      lng: 11.568801449924484,
+      city: 'Munich',
+      country: 'Germany'
+    };
+    
+    /* IP-based geolocation (disabled)
     try {
       // Use ipapi.co for IP-based geolocation (free, no API key needed)
       const response = await fetch('https://ipapi.co/json/');
@@ -852,6 +871,7 @@
       console.log("🦁 IP geolocation error:", error.message);
       return null;
     }
+    */
   }
 
   async function run() {
@@ -873,8 +893,6 @@
       getUserLocation().then(location => {
         console.log('vom-platzl: user location received:', location);
         userLocation = location;
-        // Update map with user location if we have it
-        updateMapWithLocation(location);
         
         // Load data with user location coordinates
         const lat = location ? location.lat : null;
@@ -883,6 +901,8 @@
         return getData(query, lat, lng);
       }).then(data => {
         console.log('vom-platzl: backend data received:', data);
+        // Update map with user location and data (for first place destination)
+        updateMapWithLocation(userLocation, data);
         injectHeroSection(userLocation, data);
       }).catch(error => {
         console.error('vom-platzl: error loading data or location:', error);
