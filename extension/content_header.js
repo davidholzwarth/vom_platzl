@@ -17,7 +17,7 @@
                             || document.querySelector('body');
   
       if (!searchContainer) {
-        console.log("🦁 Vom Platzl Header: No injection target found.");
+        console.log("Vom Platzl Header: No injection target found.");
         return;
       }
   

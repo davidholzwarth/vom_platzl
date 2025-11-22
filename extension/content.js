@@ -24,10 +24,10 @@
 
   BACKEND_URL = 'http://localhost:8000'
 
-  async function getData(query, ip, address) {
+  async function getData(query, lat, lon) {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(
-        { action: 'fetchData', query, ip, address },
+        { action: 'fetchData', query, lat, lon },
         (response) => {
           if (chrome.runtime.lastError) {
             console.error('Runtime error:', chrome.runtime.lastError);
@@ -43,17 +43,17 @@
     });
   }
 
-
   // Google Maps Embed API with Directions
-  function getDirectionsEmbedUrl(userLat, userLng) {
+  function getDirectionsEmbedUrl(userLat, userLng, destLat, destLng) {
     // Interactive Google Maps embed with route directions
     // This shows an interactive map with the route displayed
-    return `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_CONFIG.API_KEY}&origin=${userLat},${userLng}&destination=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=${GOOGLE_MAPS_CONFIG.ZOOM_LEVEL}`;
+    const destination = destLat && destLng ? `${destLat},${destLng}` : `${STORE_LATITUDE},${STORE_LONGITUDE}`;
+    return `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_CONFIG.API_KEY}&origin=${userLat},${userLng}&destination=${destination}&mode=walking&zoom=15`;
   }
 
   function getStoreEmbedUrl() {
     // Interactive map showing store location when user location is not available
-    return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_CONFIG.API_KEY}&q=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=14`;
+    return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_CONFIG.API_KEY}&q=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=15`;
   }
 
   function injectHeroSection(userLocation = null, data = null) {
@@ -77,7 +77,7 @@
       || document.querySelector('div[role="main"]');
 
     if (!mainContent) {
-      console.log("🦁 Vom Platzl: CRITICAL - No injection target found.");
+      console.log("Vom Platzl: CRITICAL - No injection target found.");
       return;
     } else {
       console.log("main content", mainContent)
@@ -123,8 +123,17 @@
 
     // Generate interactive map embed URL with route
     let embedMapUrl;
-    if (userLocation && userLocation.lat && userLocation.lng) {
-      embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng);
+    if (userLocation && userLocation.lat && userLocation.lng && data && data.places && data.places.length > 0) {
+      // Sort places by distance to get the nearest one
+      let sortedPlaces = [...data.places].sort((a, b) => {
+        const distA = getDistanceValue(a.distance);
+        const distB = getDistanceValue(b.distance);
+        return distA - distB;
+      });
+      const firstPlace = sortedPlaces[0];
+      const destLat = firstPlace ? firstPlace.lat : null;
+      const destLng = firstPlace ? firstPlace.lon : null;
+      embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
     } else {
       embedMapUrl = getStoreEmbedUrl();
     }
@@ -171,7 +180,6 @@
             letter-spacing: 0.5px;
             margin-bottom: 8px;
           ">
-            <span>✨</span>
             <span>In deiner Nähe verfügbar</span>
           </div>
           
@@ -226,13 +234,6 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: stretch;">
           <!-- Left: Places List -->
           <div class="vp-places-list">
-            <h4 style="
-              margin: 0 0 16px 0;
-              font-size: 18px;
-              font-weight: 600;
-              color: ${C_TEXT};
-            ">
-              Verfügbare Geschäfte
             </h4>
             ${data_html}
           </div>
@@ -264,7 +265,7 @@
       </div>
       
       <!-- Minimize Button (hidden until expanded) -->
-      <button id="vp-minimize-btn" class="vp-close-btn" style="display:none; position:absolute; top:16px; right:16px; background:${C_PRIMARY}; color:#fff; border:0; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; z-index:20; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);">✕ Schließen</button>
+      <button id="vp-minimize-btn" class="vp-close-btn" style="display:none; position:absolute; top:16px; right:16px; background:${C_PRIMARY}; color:#fff; border:0; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; z-index:20; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);">X Schließen</button>
     `;
 
     // Wrap the hero in the full-width wrapper
@@ -409,7 +410,7 @@
     // This pushes everything else down.
     const body = document.body
     mainContent.parentElement.prepend(wrapper);
-    console.log("🦁 Vom Platzl: Search result block injected into", mainContent);
+    console.log("Vom Platzl: Search result block injected into", mainContent);
     
     // If we already have data, update immediately
     if (data) {
@@ -430,6 +431,31 @@
   // Helper function to check if currently open
   function isOpenNow(opening_hours) {
     return opening_hours && opening_hours.open_now === true;
+  }
+  
+  // Helper function to extract numeric distance value for sorting
+  function getDistanceValue(distanceString) {
+    if (!distanceString) return Infinity;
+    const match = distanceString.match(/([\d.]+)\s*(km|m)/);
+    if (!match) return Infinity;
+    const value = parseFloat(match[1]);
+    const unit = match[2];
+    return unit === 'km' ? value : value / 1000; // Convert to km for consistent comparison
+  }
+  
+  // Update header with walking time estimate
+  function updateHeaderWithWalkingTime(data) {
+    const walkingTimeElement = document.getElementById('vp-walking-time');
+    if (!walkingTimeElement) return;
+    
+    const places = data.places || [];
+    if (places.length > 0 && places[0].duration) {
+      walkingTimeElement.textContent = `${places[0].duration} Fußweg zum nächsten Geschäft`;
+    } else if (places.length > 0 && places[0].distance) {
+      walkingTimeElement.textContent = `${places[0].distance} zum nächsten Geschäft`;
+    } else {
+      walkingTimeElement.textContent = '';
+    }
   }
 
   // Helper function to get time until next opening
@@ -494,8 +520,19 @@
     const container = document.getElementById('vp-places-container');
     if (!container) return;
     
-    const places = data.places || [];
+    let places = data.places || [];
+    
+    // Sort places by distance (nearest first)
+    places = places.sort((a, b) => {
+      const distA = getDistanceValue(a.distance);
+      const distB = getDistanceValue(b.distance);
+      return distA - distB;
+    });
+    
     const maxStores = Math.min(5, places.length);
+    
+    // Update header with walking time
+    updateHeaderWithWalkingTime(data);
     
     if (maxStores === 0) {
       container.innerHTML = `<div style="color: ${C_TEXT_SECONDARY}; text-align: center; padding: 20px;">Keine Geschäfte gefunden</div>`;
@@ -526,15 +563,20 @@
         <div style="
           display: flex;
           align-items: center;
+          justify-content: space-between;
           padding: 8px 12px;
           background: white;
           border-radius: 8px;
           font-size: 14px;
           color: ${C_TEXT};
           transition: all 0.2s ease;
-        " class="vp-place-mini">
-          ${openIndicator}
-          <span style="font-weight: 500;">${place.name || 'Unbekanntes Geschäft'}</span>
+          cursor: pointer;
+        " class="vp-place-mini" data-lat="${place.lat}" data-lon="${place.lon}">
+          <div style="display: flex; align-items: center;">
+            ${openIndicator}
+            <span style="font-weight: 500;">${place.name || 'Unbekanntes Geschäft'}</span>
+          </div>
+          ${place.distance ? `<span style="font-size: 12px; color: ${C_TEXT_SECONDARY}; font-weight: 500;">${place.distance}</span>` : ''}
         </div>
       `;
     }
@@ -558,7 +600,8 @@
           padding: 16px;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
           transition: all 0.2s ease;
-        " class="vp-place-card">
+          cursor: pointer;
+        " class="vp-place-card" data-lat="${place.lat}" data-lon="${place.lon}">
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
             <div style="flex: 1;">
               <h5 style="
@@ -572,7 +615,14 @@
                   font-size: 13px;
                   color: ${C_TEXT_SECONDARY};
                   margin-bottom: 4px;
-                ">📍 ${place.tags.vicinity}</div>
+                ">${place.tags.vicinity}</div>
+              ` : ''}
+              ${place.distance ? `
+                <div style="
+                  font-size: 13px;
+                  color: ${C_TEXT_SECONDARY};
+                  font-weight: 500;
+                ">${place.distance}</div>
               ` : ''}
               ${rating ? `
                 <div style="
@@ -612,7 +662,7 @@
             color: ${C_TEXT_SECONDARY};
             margin-bottom: 12px;
           ">
-            <div style="font-weight: 600; margin-bottom: 6px; color: ${C_TEXT};">🕒 Öffnungszeiten</div>
+            <div style="font-weight: 600; margin-bottom: 6px; color: ${C_TEXT};">Öffnungszeiten</div>
             ${place.opening_hours.weekday_text ? place.opening_hours.weekday_text.map(day => 
               `<div style="padding: 2px 0; padding-left: 16px;">${day}</div>`
             ).join('') : ''}
@@ -646,7 +696,6 @@
                transition: all 0.2s ease;
              "
              class="vp-maps-link">
-            <span>📍</span>
             <span>In Google Maps öffnen</span>
           </a>
         </div>
@@ -667,6 +716,14 @@
         this.style.background = 'white';
         this.style.transform = 'translateX(0)';
       });
+      
+      // Add click handler to update map directions
+      card.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const lat = this.getAttribute('data-lat');
+        const lon = this.getAttribute('data-lon');
+        updateMapDirections(lat, lon);
+      });
     });
     
     const placeCards = container.querySelectorAll('.vp-place-card');
@@ -678,6 +735,16 @@
       card.addEventListener('mouseleave', function() {
         this.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
         this.style.transform = 'translateY(0)';
+      });
+      
+      // Add click handler to update map directions (but not on links)
+      card.addEventListener('click', function(e) {
+        // Don't trigger if clicking on the maps link
+        if (e.target.closest('.vp-maps-link')) return;
+        e.stopPropagation();
+        const lat = this.getAttribute('data-lat');
+        const lon = this.getAttribute('data-lon');
+        updateMapDirections(lat, lon);
       });
     });
     
@@ -694,16 +761,44 @@
     });
   }
   
-  function updateMapWithLocation(userLocation) {
+  function updateMapWithLocation(userLocation, data) {
     if (!userLocation || !userLocation.lat || !userLocation.lng) return;
     
     const iframe = document.querySelector('#vom-platzl-hero-section .vp-iframe');
     if (!iframe) return;
     
-    // Update iframe with directions from user location
-    const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng);
+    // Sort places by distance first to match the displayed list
+    let places = data.places || [];
+    places = places.sort((a, b) => {
+      const distA = getDistanceValue(a.distance);
+      const distB = getDistanceValue(b.distance);
+      return distA - distB;
+    });
+    
+    // Get first place destination after sorting
+    const firstPlace = places.length > 0 ? places[0] : null;
+    const destLat = firstPlace ? firstPlace.lat : null;
+    const destLng = firstPlace ? firstPlace.lon : null;
+    
+    // Update iframe with directions from user location to first place
+    const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
     iframe.src = embedMapUrl;
-    console.log("🦁 Vom Platzl: Map updated with user location");
+    console.log("Vom Platzl: Map updated with user location and first place destination (sorted by distance)");
+  }
+  
+  // Function to update map directions to a specific store
+  function updateMapDirections(destLat, destLng) {
+    const iframe = document.querySelector('#vom-platzl-hero-section .vp-iframe');
+    if (!iframe) return;
+    
+    // Get user location from the data stored during initial load
+    getUserLocation().then(userLocation => {
+      if (userLocation && userLocation.lat && userLocation.lng) {
+        const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
+        iframe.src = embedMapUrl;
+        console.log("Vom Platzl: Map directions updated to:", destLat, destLng);
+      }
+    });
   }
 
   function injectStickyHeader() {
@@ -716,7 +811,7 @@
       || document.querySelector('body');
 
     if (!searchContainer) {
-      console.log("🦁 Vom Platzl Header: No injection target found.");
+      console.log("Vom Platzl Header: No injection target found.");
       return;
     }
 
@@ -757,12 +852,25 @@
         font-weight: 500;
         letter-spacing: 0.3px;
         padding: 0 20px;
-        width: 100%;
         display: block;
       `;
     textElement.textContent = 'Auf Lager bei einem Local Hero!';
+    
+    // Create walking time estimate element
+    const walkingTimeElement = document.createElement('div');
+    walkingTimeElement.id = 'vp-walking-time';
+    walkingTimeElement.style.cssText = `
+        font-size: 14px;
+        font-weight: 400;
+        color: #666666;
+        padding: 0 20px;
+        margin-top: 4px;
+        display: block;
+      `;
+    walkingTimeElement.textContent = ''; // Will be populated when data loads
 
     textContainer.appendChild(textElement);
+    textContainer.appendChild(walkingTimeElement);
 
     // Create button with lion emoji
     const button = document.createElement('button');
@@ -801,7 +909,7 @@
 
     document.body.insertBefore(header, document.body.firstChild);
 
-    console.log("🦁 Vom Platzl: Header injected");
+    console.log("Vom Platzl: Header injected");
   }
 
   // --- RUNNER ---
@@ -817,17 +925,25 @@
   }
 
   async function getUserLocation() {
+    // Hardcoded location for testing
+    return {
+      lat: 48.149940170589154,
+      lng: 11.568801449924484,
+      city: 'Munich',
+      country: 'Germany'
+    };
+    
+    /* 
     try {
-      // Use ipapi.co for IP-based geolocation (free, no API key needed)
       const response = await fetch('https://ipapi.co/json/');
       if (!response.ok) {
-        console.log("🦁 IP geolocation request failed");
+        console.log("IP geolocation request failed");
         return null;
       }
       
       const data = await response.json();
       if (data.latitude && data.longitude) {
-        console.log("🦁 IP geolocation success:", data.city, data.country_name);
+        console.log("IP geolocation success:", data.city, data.country_name);
         return {
           lat: data.latitude,
           lng: data.longitude,
@@ -836,12 +952,13 @@
         };
       }
       
-      console.log("🦁 IP geolocation: no coordinates in response");
+      console.log("IP geolocation: no coordinates in response");
       return null;
     } catch (error) {
-      console.log("🦁 IP geolocation error:", error.message);
+      console.log("IP geolocation error:", error.message);
       return null;
     }
+    */
   }
 
   async function run() {
@@ -857,24 +974,26 @@
       // Inject hero section immediately (with loading state, no location yet)
       injectHeroSection(null, null);
       
-      // Load user location and data asynchronously
+      // Load user location first, then fetch data with location
       let userLocation = null;
       
       getUserLocation().then(location => {
         console.log('vom-platzl: user location received:', location);
         userLocation = location;
-        // Update map with user location if we have it
-        updateMapWithLocation(location);
-      }).catch(error => {
-        console.error('vom-platzl: error loading location:', error);
-      });
-      
-      // Load data asynchronously and update when ready
-      getData(query, '8.8.8.8', '').then(data => {
+        
+        // Load data with user location coordinates
+        const lat = location ? location.lat : null;
+        const lng = location ? location.lng : null;
+        
+        return getData(query, lat, lng);
+      }).then(data => {
         console.log('vom-platzl: backend data received:', data);
+        // Update map with user location and data (for first place destination)
+        updateMapWithLocation(userLocation, data);
         injectHeroSection(userLocation, data);
+        updateHeaderWithWalkingTime(data);
       }).catch(error => {
-        console.error('vom-platzl: error loading data:', error);
+        console.error('vom-platzl: error loading data or location:', error);
         const container = document.getElementById('vp-places-container');
         if (container) {
           container.innerHTML = `<div style="color: ${C_TEXT_SECONDARY};">Fehler beim Laden der Geschäfte</div>`;

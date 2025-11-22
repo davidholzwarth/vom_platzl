@@ -1,11 +1,17 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'fetchData') {
-    const { query, ip, address } = request;
+    const { query, lat, lon } = request;
     const BACKEND_URL = 'http://localhost:8000';
     const url = new URL(`${BACKEND_URL}/get_places`);
     url.searchParams.append('query', query);
-    if (ip) url.searchParams.append('ip', ip);
-    if (address) url.searchParams.append('adresse', address);
+    
+    // Add lat/lon if provided
+    if (lat !== undefined && lat !== null) {
+      url.searchParams.append('lat', lat.toString());
+    }
+    if (lon !== undefined && lon !== null) {
+      url.searchParams.append('lon', lon.toString());
+    }
 
     fetch(url.toString())
       .then(response => {
