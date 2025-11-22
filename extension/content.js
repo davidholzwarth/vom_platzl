@@ -234,14 +234,7 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: stretch;">
           <!-- Left: Places List -->
           <div class="vp-places-list">
-            <h4 style="
-              margin: 0 0 16px 0;
-              font-size: 18px;
-              font-weight: 600;
-              color: ${C_TEXT};
-            ">
-              Verfügbare Geschäfte
-            </h4>
+            
             ${data_html}
           </div>
           
