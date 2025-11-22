@@ -1,9 +1,6 @@
 (function () {
   // --- CONFIGURATION ---
-  const BACKEND = 'http://localhost:3000';
   const HERO_ID = 'vom-platzl-hero-section';
-  const TEST_MODE = true;
-  // Added very common words to ensure it triggers for almost any test search
 
   // Store configuration
   const STORE_IMAGE_URL = ''; // Set your store image URL here
@@ -14,8 +11,6 @@
   const C_GOLD = '#F2D027';
   const C_BLACK = '#202124';
   const C_BG_LIGHT = '#FFFDF5';
-
-  console.log('🦁 Vom Platzl: "Brute Force" Hero Mode Loaded.');
 
   // --- THE HERO SECTION (BRUTE FORCE INJECTION) ---
 
@@ -31,7 +26,7 @@
     return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_CONFIG.API_KEY}&q=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=14`;
   }
 
-  function injectHeroSection(matches, userLocation = null) {
+  function injectHeroSection(userLocation = null) {
     if (document.getElementById(HERO_ID)) return;
 
     // STRATEGY: Find the main content area, but we'll break out of its constraints
@@ -45,17 +40,15 @@
     if (!mainContent) {
       console.log("🦁 Vom Platzl: CRITICAL - No injection target found.");
       return;
+    } else {
+      console.log("main content", mainContent)
     }
 
     // Create a wrapper that breaks out to full viewport width
     const wrapper = document.createElement('div');
     wrapper.style.cssText = `
-      width: 100vw;
+      width: 100%;
       position: relative;
-      left: 50%;
-      right: 50%;
-      margin-left: -50vw;
-      margin-right: -50vw;
       margin-bottom: 20px;
       box-sizing: border-box;
       overflow-x: hidden;
@@ -123,13 +116,6 @@
             font-weight: normal;
             line-height: 1.2;
           ">
-            <a href="#" style="
-              color: #1a0dab;
-              text-decoration: none;
-              cursor: pointer;
-            " onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-              Munich Local Scout - Find ${uniqueMatches.slice(0, 2).join(' & ')} Nearby
-            </a>
           </h3>
           
           <div style="
@@ -140,17 +126,7 @@
           ">
             vom-platzl.de › local-scout
           </div>
-          
-          <div style="
-            margin: 0 0 6px 0;
-            font-size: 12px;
-            line-height: 1.3;
-            color: #4d5156;
-          ">
-            We detected shopping intent for <strong>${uniqueMatches.slice(0, 3).join(', ')}</strong>. 
-            Discover <strong style="color: #1a0dab;">${Array.isArray(matches) ? matches.length : 0} local options</strong> in Munich. 
-            Shop local, support Munich businesses, and find exactly what you need nearby.
-          </div>
+        
           
           <div style="
             display: flex;
@@ -223,19 +199,12 @@
 
     // THE BRUTE FORCE: Insert as the very first child of the target
     // This pushes everything else down.
+    const body = document.body
     mainContent.prepend(wrapper);
     console.log("🦁 Vom Platzl: Search result block injected into", mainContent);
   }
 
   // --- RUNNER ---
-
-  function debounce(fn, wait) {
-    let t = null;
-    return function (...args) {
-      clearTimeout(t);
-      t = setTimeout(() => fn.apply(this, args), wait);
-    };
-  }
 
   function getUserLocation() {
     return new Promise((resolve) => {
@@ -267,170 +236,13 @@
     if (shoppingIntent) {
       console.log('vom-platzl: shoppingIntent=true — injecting hero section');
       const userLocation = await getUserLocation();
-      // we no longer rely on matches; pass an empty array for compatibility
-      injectHeroSection([], userLocation);
+      injectHeroSection(userLocation);
     } else {
       // remove existing hero if present
       const existing = document.getElementById(HERO_ID);
       if (existing) existing.remove();
       console.log('vom-platzl: shoppingIntent=false — not injecting hero');
     }
-  }
-
-  // Watch for dynamic changes in search results and re-run matching (debounced)
-  const debouncedRun = debounce(run, 350);
-  const observer = new MutationObserver(mutations => {
-    // If new nodes are added, re-run the matcher
-    for (const m of mutations) {
-      if (m.addedNodes && m.addedNodes.length > 0) {
-        debouncedRun();
-        return;
-      }
-    }
-  });
-
-  // Start observing a sensible root element (search results area) or body as fallback
-  function startObserver() {
-    const root = document.querySelector('main, #search, #rso, body');
-    if (root) {
-      try {
-        observer.observe(root, { childList: true, subtree: true });
-        console.log('vom-platzl: observing DOM changes for dynamic results');
-      } catch (e) {
-        console.warn('vom-platzl: failed to observe DOM,', e);
-      }
-    }
-  }
-
-  // start observing immediately
-  startObserver();
-
-  // Basic click-to-show-product-name functionality
-  function extractTitleFromCard(card) {
-    if (!card) return null;
-    const titleSelectors = ['h3', 'h4', '[role="heading"]', '.shntl', '.sh-ct__title', 'span'];
-    for (const sel of titleSelectors) {
-      const el = card.querySelector(sel);
-      if (el && el.innerText && el.innerText.trim().length > 0) return el.innerText.trim();
-    }
-    // fallback: textContent of the card trimmed
-    const txt = card.textContent && card.textContent.trim();
-    if (txt && txt.length > 0) return txt.split('\n')[0].trim();
-    return null;
-  }
-
-  function showToast(text) {
-    if (!text) return;
-    try {
-      const id = 'vom-platzl-toast';
-      let t = document.getElementById(id);
-      if (t) t.remove();
-      t = document.createElement('div');
-      t.id = id;
-      t.style.position = 'fixed';
-      t.style.bottom = '18px';
-      t.style.right = '18px';
-      t.style.zIndex = '1000000';
-      t.style.padding = '10px 14px';
-      t.style.background = 'rgba(0,0,0,0.8)';
-      t.style.color = 'white';
-      t.style.borderRadius = '8px';
-      t.style.fontFamily = 'Arial, sans-serif';
-      t.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-      t.innerText = text;
-      document.body.appendChild(t);
-      setTimeout(() => {
-        t && t.remove();
-      }, 3500);
-    } catch (e) {
-      console.log('vom-platzl toast:', text);
-    }
-  }
-
-  document.addEventListener('click', function (ev) {
-    try {
-      const cardSelectors = ['.sh-dgr__grid-result', '.sh-dlr__list-result', 'g-inner-card', 'div[data-attrid^="shopping_results"]', 'div[data-attrid*="product"]', 'div[jscontroller]'];
-      let el = ev.target;
-      // climb up the DOM to find a matching card
-      while (el && el !== document.body) {
-        if (el.matches) {
-          for (const sel of cardSelectors) {
-            if (el.matches(sel)) {
-              const title = extractTitleFromCard(el) || extractTitleFromCard(ev.target.closest('a'));
-              if (title) {
-                // insert the product name into the card's HTML
-                insertLabelIntoCard(el, title);
-                showToast(title);
-                // expose last clicked product
-                try { window.vomPlatzl = window.vomPlatzl || {}; window.vomPlatzl.lastClicked = title; } catch (e) { }
-                return;
-              }
-            }
-          }
-        }
-        el = el.parentElement;
-      }
-    } catch (e) {
-      console.warn('vom-platzl click handler error', e);
-    }
-  }, true);
-
-  // Insert a small label/badge into the clicked product card's HTML
-  function insertLabelIntoCard(card, text) {
-    if (!card || !text) return;
-    try {
-      // remove previous labels
-      const prev = card.querySelector('.vom-platzl-inline-label');
-      if (prev) prev.remove();
-
-      // ensure card can contain absolutely positioned badge
-      const prevPos = card.style.position;
-      if (!prevPos || prevPos === '' || prevPos === 'static') {
-        card.dataset.vomPlatzlPrevPos = 'static';
-        card.style.position = 'relative';
-      }
-
-      const badge = document.createElement('div');
-      badge.className = 'vom-platzl-inline-label';
-      badge.innerText = text;
-      badge.style.position = 'absolute';
-      badge.style.top = '8px';
-      badge.style.right = '8px';
-      badge.style.zIndex = '999999';
-      badge.style.background = 'rgba(255,215,74,0.95)';
-      badge.style.color = '#111';
-      badge.style.padding = '6px 8px';
-      badge.style.borderRadius = '6px';
-      badge.style.fontSize = '12px';
-      badge.style.fontWeight = '600';
-      badge.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-      badge.style.maxWidth = '60%';
-      badge.style.overflow = 'hidden';
-      badge.style.textOverflow = 'ellipsis';
-      badge.style.whiteSpace = 'nowrap';
-
-      card.appendChild(badge);
-
-      // remove badge after timeout
-      setTimeout(() => {
-        try { badge.remove(); } catch (e) { }
-      }, 5000);
-    } catch (e) {
-      console.warn('vom-platzl: failed to insert label into card', e);
-    }
-  }
-
-  // expose a small dev API so you can change rules and trigger runs from the console
-  try {
-    window.vomPlatzl = window.vomPlatzl || {};
-    window.vomPlatzl.setTestRules = function (arr) {
-      if (!Array.isArray(arr)) return console.warn('vom-platzl: setTestRules expects an array');
-      testRules = arr.map(String);
-      console.log('vom-platzl: testRules updated', testRules);
-    };
-    window.vomPlatzl.run = run;
-  } catch (e) {
-    // ignore in strict environments
   }
 
   // Run on initial load and also on navigation events (single-page nav)
