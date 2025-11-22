@@ -619,6 +619,18 @@
       });
     });
   }
+  
+  function updateMapWithLocation(userLocation) {
+    if (!userLocation || !userLocation.lat || !userLocation.lng) return;
+    
+    const iframe = document.querySelector('#vom-platzl-hero-section .vp-iframe');
+    if (!iframe) return;
+    
+    // Update iframe with directions from user location
+    const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng);
+    iframe.src = embedMapUrl;
+    console.log("🦁 Vom Platzl: Map updated with user location");
+  }
 
   function injectStickyHeader() {
     // Prevent duplicate headers
@@ -730,28 +742,32 @@
     return null;
   }
 
-  function getUserLocation() {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        console.log("🦁 Geolocation not supported");
-        resolve(null);
-        return;
+  async function getUserLocation() {
+    try {
+      // Use ipapi.co for IP-based geolocation (free, no API key needed)
+      const response = await fetch('https://ipapi.co/json/');
+      if (!response.ok) {
+        console.log("🦁 IP geolocation request failed");
+        return null;
       }
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.log("🦁 Geolocation error:", error.message);
-          resolve(null);
-        },
-        { timeout: 50, enableHighAccuracy: false }
-      );
-    });
+      
+      const data = await response.json();
+      if (data.latitude && data.longitude) {
+        console.log("🦁 IP geolocation success:", data.city, data.country_name);
+        return {
+          lat: data.latitude,
+          lng: data.longitude,
+          city: data.city,
+          country: data.country_name
+        };
+      }
+      
+      console.log("🦁 IP geolocation: no coordinates in response");
+      return null;
+    } catch (error) {
+      console.log("🦁 IP geolocation error:", error.message);
+      return null;
+    }
   }
 
   async function run() {
@@ -763,11 +779,21 @@
       injectStickyHeader();
 
       const query = getGoogleSearchQuery();
-      const userLocation = await getUserLocation();
       
-      // Inject hero section immediately (with loading state)
-    
-      injectHeroSection(userLocation, null);
+      // Inject hero section immediately (with loading state, no location yet)
+      injectHeroSection(null, null);
+      
+      // Load user location and data asynchronously
+      let userLocation = null;
+      
+      getUserLocation().then(location => {
+        console.log('vom-platzl: user location received:', location);
+        userLocation = location;
+        // Update map with user location if we have it
+        updateMapWithLocation(location);
+      }).catch(error => {
+        console.error('vom-platzl: error loading location:', error);
+      });
       
       // Load data asynchronously and update when ready
       getData(query, '8.8.8.8', '').then(data => {
