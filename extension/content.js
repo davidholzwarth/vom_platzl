@@ -138,7 +138,7 @@
         <div style="
           width: 96px;
           height: 96px;
-          background: linear-gradient(135deg, ${C_PRIMARY_LIGHT} 0%, ${C_PRIMARY} 100%);
+          background: ${C_BG};
           border: none;
           border-radius: 16px;
           display: flex;
@@ -223,15 +223,9 @@
       
       <!-- Expanded Content (hidden until expanded) -->
       <div class="vp-expanded-section" style="display: none; margin-top: 24px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: stretch;">
           <!-- Left: Places List -->
-          <div class="vp-places-list" style="
-            background: white;
-            border: 2px solid ${C_BORDER};
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          ">
+          <div class="vp-places-list">
             <h4 style="
               margin: 0 0 16px 0;
               font-size: 18px;
@@ -246,11 +240,14 @@
           <!-- Right: Interactive Route Map -->
           <div class="vp-map" style="
             width: 100%;
-            height: 400px;
+            height: 100%;
+            min-height: 400px;
             border: 2px solid ${C_BORDER};
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 20px;
           ">
             <iframe class="vp-iframe"
               src="${embedMapUrl}"
@@ -327,7 +324,7 @@
         }
         #${HERO_ID}.vp-expanded { 
           width: 100% !important;
-          background: linear-gradient(135deg, ${C_BG} 0%, ${C_BG_SECONDARY} 100%) !important;
+          background: ${C_BG};
           padding: 32px 40px !important;
           cursor: default;
           transform: translateY(0) !important;
@@ -383,6 +380,12 @@
         wrapper.classList.add('vp-expanded');
         const minBtn = hero.querySelector('#vp-minimize-btn');
         if (minBtn) minBtn.style.display = 'block';
+        
+        // Toggle places list views
+        const minimized = hero.querySelector('.vp-places-minimized');
+        const expanded = hero.querySelector('.vp-places-expanded');
+        if (minimized) minimized.style.display = 'none';
+        if (expanded) expanded.style.display = 'flex';
       }
     });
 
@@ -401,6 +404,12 @@
           map.style.height = '';
         }
         minBtn.style.display = 'none';
+        
+        // Toggle places list views back
+        const minimized = hero.querySelector('.vp-places-minimized');
+        const expanded = hero.querySelector('.vp-places-expanded');
+        if (minimized) minimized.style.display = 'flex';
+        if (expanded) expanded.style.display = 'none';
       });
     }
 
@@ -416,26 +425,207 @@
     }
   }
   
+  // Helper function to get today's opening hours text
+  function getTodayOpeningHours(opening_hours) {
+    if (!opening_hours || !opening_hours.weekday_text) return 'Keine Öffnungszeiten verfügbar';
+    
+    const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayIndex = today === 0 ? 6 : today - 1; // Convert to weekday_text index (Monday = 0)
+    
+    return opening_hours.weekday_text[dayIndex] || 'Keine Öffnungszeiten verfügbar';
+  }
+
+  // Helper function to check if currently open
+  function isOpenNow(opening_hours) {
+    return opening_hours && opening_hours.open_now === true;
+  }
+
   function updateHeroWithData(data) {
     const container = document.getElementById('vp-places-container');
     if (!container) return;
     
-    let data_html = `<ul style="list-style-type: disc; padding-left: 20px; margin: 0;">`;
     const places = data.places || [];
     const maxStores = Math.min(5, places.length);
     
     if (maxStores === 0) {
-      data_html = `<div style="color: ${C_TEXT_SECONDARY};">Keine Geschäfte gefunden</div>`;
-    } else {
-      for (let i = 0; i < maxStores; i++) {
-        const place = places[i];
-        const element_html = `<li style="margin-bottom: 4px; color: ${C_TEXT};">${place.name || 'Unknown Store'} - ${place.distance || ''}</li>`;
-        data_html += element_html;
-      }
-      data_html += `</ul>`;
+      container.innerHTML = `<div style="color: ${C_TEXT_SECONDARY}; text-align: center; padding: 20px;">Keine Geschäfte gefunden</div>`;
+      return;
     }
     
-    container.innerHTML = data_html;
+    // Check if hero is currently expanded
+    const hero = document.getElementById(HERO_ID);
+    const isExpanded = hero && hero.classList.contains('vp-expanded');
+    
+    // Create minimized version (simple list with names)
+    let minimized_html = `<div class="vp-places-minimized" style="display: ${isExpanded ? 'none' : 'flex'}; flex-direction: column; gap: 8px;">`;
+    
+    for (let i = 0; i < maxStores; i++) {
+      const place = places[i];
+      const openNow = isOpenNow(place.opening_hours);
+      const openIndicator = place.opening_hours ? 
+        `<span style="
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: ${openNow ? C_ACCENT : '#ef4444'};
+          margin-right: 8px;
+        "></span>` : '';
+      
+      minimized_html += `
+        <div style="
+          display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          background: white;
+          border-radius: 8px;
+          font-size: 14px;
+          color: ${C_TEXT};
+          transition: all 0.2s ease;
+        " class="vp-place-mini">
+          ${openIndicator}
+          <span style="font-weight: 500;">${place.name || 'Unbekanntes Geschäft'}</span>
+        </div>
+      `;
+    }
+    minimized_html += `</div>`;
+    
+    // Create expanded version (detailed cards)
+    let expanded_html = `<div class="vp-places-expanded" style="display: ${isExpanded ? 'flex' : 'none'}; flex-direction: column; gap: 16px;">`;
+    
+    for (let i = 0; i < maxStores; i++) {
+      const place = places[i];
+      const openNow = isOpenNow(place.opening_hours);
+      const todayHours = getTodayOpeningHours(place.opening_hours);
+      const rating = place.rating ? `⭐ ${place.rating}` : '';
+      const ratingCount = place.user_ratings_total ? ` (${place.user_ratings_total})` : '';
+      
+      expanded_html += `
+        <div style="
+          background: white;
+          border: 1px solid ${C_BORDER};
+          border-radius: 12px;
+          padding: 16px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          transition: all 0.2s ease;
+        " class="vp-place-card">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+            <div style="flex: 1;">
+              <h5 style="
+                margin: 0 0 4px 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: ${C_TEXT};
+              ">${place.name || 'Unbekanntes Geschäft'}</h5>
+              ${place.tags && place.tags.vicinity ? `
+                <div style="
+                  font-size: 13px;
+                  color: ${C_TEXT_SECONDARY};
+                  margin-bottom: 4px;
+                ">📍 ${place.tags.vicinity}</div>
+              ` : ''}
+              ${rating ? `
+                <div style="
+                  font-size: 13px;
+                  color: ${C_TEXT_SECONDARY};
+                ">${rating}${ratingCount}</div>
+              ` : ''}
+            </div>
+          </div>
+          
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: ${openNow ? '#ecfdf5' : '#fef2f2'};
+            border-radius: 8px;
+            margin-bottom: 12px;
+          ">
+            <span style="
+              display: inline-block;
+              width: 8px;
+              height: 8px;
+              border-radius: 50%;
+              background: ${openNow ? C_ACCENT : '#ef4444'};
+            "></span>
+            <span style="
+              font-size: 13px;
+              font-weight: 500;
+              color: ${openNow ? '#059669' : '#dc2626'};
+            ">${openNow ? 'Jetzt geöffnet' : 'Geschlossen'}</span>
+          </div>
+          
+          <div style="
+            font-size: 13px;
+            color: ${C_TEXT_SECONDARY};
+            margin-bottom: 12px;
+            padding-left: 20px;
+          ">🕒 ${todayHours}</div>
+          
+          <a href="${place.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lon}`}" 
+             target="_blank"
+             rel="noopener noreferrer"
+             style="
+               display: inline-flex;
+               align-items: center;
+               gap: 6px;
+               color: ${C_PRIMARY};
+               text-decoration: none;
+               font-size: 14px;
+               font-weight: 500;
+               padding: 8px 16px;
+               background: ${C_BG_SECONDARY};
+               border-radius: 8px;
+               transition: all 0.2s ease;
+             "
+             class="vp-maps-link">
+            <span>📍</span>
+            <span>In Google Maps öffnen</span>
+          </a>
+        </div>
+      `;
+    }
+    expanded_html += `</div>`;
+    
+    container.innerHTML = minimized_html + expanded_html;
+    
+    // Add hover effects with event listeners
+    const miniCards = container.querySelectorAll('.vp-place-mini');
+    miniCards.forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        this.style.background = C_BG_SECONDARY;
+        this.style.transform = 'translateX(4px)';
+      });
+      card.addEventListener('mouseleave', function() {
+        this.style.background = 'white';
+        this.style.transform = 'translateX(0)';
+      });
+    });
+    
+    const placeCards = container.querySelectorAll('.vp-place-card');
+    placeCards.forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+        this.style.transform = 'translateY(-2px)';
+      });
+      card.addEventListener('mouseleave', function() {
+        this.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+        this.style.transform = 'translateY(0)';
+      });
+    });
+    
+    const mapsLinks = container.querySelectorAll('.vp-maps-link');
+    mapsLinks.forEach(link => {
+      link.addEventListener('mouseenter', function() {
+        this.style.background = C_PRIMARY;
+        this.style.color = 'white';
+      });
+      link.addEventListener('mouseleave', function() {
+        this.style.background = C_BG_SECONDARY;
+        this.style.color = C_PRIMARY;
+      });
+    });
   }
 
   function injectStickyHeader() {
@@ -567,7 +757,7 @@
           console.log("🦁 Geolocation error:", error.message);
           resolve(null);
         },
-        { timeout: 5000, enableHighAccuracy: false }
+        { timeout: 50, enableHighAccuracy: false }
       );
     });
   }
@@ -584,6 +774,7 @@
       const userLocation = await getUserLocation();
       
       // Inject hero section immediately (with loading state)
+    
       injectHeroSection(userLocation, null);
       
       // Load data asynchronously and update when ready
