@@ -48,12 +48,12 @@
     // Interactive Google Maps embed with route directions
     // This shows an interactive map with the route displayed
     const destination = destLat && destLng ? `${destLat},${destLng}` : `${STORE_LATITUDE},${STORE_LONGITUDE}`;
-    return `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_CONFIG.API_KEY}&origin=${userLat},${userLng}&destination=${destination}&mode=walking&zoom=${GOOGLE_MAPS_CONFIG.ZOOM_LEVEL}`;
+    return `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_CONFIG.API_KEY}&origin=${userLat},${userLng}&destination=${destination}&mode=walking&zoom=15`;
   }
 
   function getStoreEmbedUrl() {
     // Interactive map showing store location when user location is not available
-    return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_CONFIG.API_KEY}&q=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=14`;
+    return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_CONFIG.API_KEY}&q=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=15`;
   }
 
   function injectHeroSection(userLocation = null, data = null) {
@@ -234,13 +234,6 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: stretch;">
           <!-- Left: Places List -->
           <div class="vp-places-list">
-            <h4 style="
-              margin: 0 0 16px 0;
-              font-size: 18px;
-              font-weight: 600;
-              color: ${C_TEXT};
-            ">
-              Verfügbare Geschäfte
             </h4>
             ${data_html}
           </div>
@@ -577,7 +570,8 @@
           font-size: 14px;
           color: ${C_TEXT};
           transition: all 0.2s ease;
-        " class="vp-place-mini">
+          cursor: pointer;
+        " class="vp-place-mini" data-lat="${place.lat}" data-lon="${place.lon}">
           <div style="display: flex; align-items: center;">
             ${openIndicator}
             <span style="font-weight: 500;">${place.name || 'Unbekanntes Geschäft'}</span>
@@ -606,7 +600,8 @@
           padding: 16px;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
           transition: all 0.2s ease;
-        " class="vp-place-card">
+          cursor: pointer;
+        " class="vp-place-card" data-lat="${place.lat}" data-lon="${place.lon}">
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
             <div style="flex: 1;">
               <h5 style="
@@ -721,6 +716,14 @@
         this.style.background = 'white';
         this.style.transform = 'translateX(0)';
       });
+      
+      // Add click handler to update map directions
+      card.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const lat = this.getAttribute('data-lat');
+        const lon = this.getAttribute('data-lon');
+        updateMapDirections(lat, lon);
+      });
     });
     
     const placeCards = container.querySelectorAll('.vp-place-card');
@@ -732,6 +735,16 @@
       card.addEventListener('mouseleave', function() {
         this.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
         this.style.transform = 'translateY(0)';
+      });
+      
+      // Add click handler to update map directions (but not on links)
+      card.addEventListener('click', function(e) {
+        // Don't trigger if clicking on the maps link
+        if (e.target.closest('.vp-maps-link')) return;
+        e.stopPropagation();
+        const lat = this.getAttribute('data-lat');
+        const lon = this.getAttribute('data-lon');
+        updateMapDirections(lat, lon);
       });
     });
     
@@ -771,6 +784,21 @@
     const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
     iframe.src = embedMapUrl;
     console.log("Vom Platzl: Map updated with user location and first place destination (sorted by distance)");
+  }
+  
+  // Function to update map directions to a specific store
+  function updateMapDirections(destLat, destLng) {
+    const iframe = document.querySelector('#vom-platzl-hero-section .vp-iframe');
+    if (!iframe) return;
+    
+    // Get user location from the data stored during initial load
+    getUserLocation().then(userLocation => {
+      if (userLocation && userLocation.lat && userLocation.lng) {
+        const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
+        iframe.src = embedMapUrl;
+        console.log("Vom Platzl: Map directions updated to:", destLat, destLng);
+      }
+    });
   }
 
   function injectStickyHeader() {
