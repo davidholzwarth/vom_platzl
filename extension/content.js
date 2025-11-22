@@ -435,6 +435,31 @@
   function isOpenNow(opening_hours) {
     return opening_hours && opening_hours.open_now === true;
   }
+  
+  // Helper function to extract numeric distance value for sorting
+  function getDistanceValue(distanceString) {
+    if (!distanceString) return Infinity;
+    const match = distanceString.match(/([\d.]+)\s*(km|m)/);
+    if (!match) return Infinity;
+    const value = parseFloat(match[1]);
+    const unit = match[2];
+    return unit === 'km' ? value : value / 1000; // Convert to km for consistent comparison
+  }
+  
+  // Update header with walking time estimate
+  function updateHeaderWithWalkingTime(data) {
+    const walkingTimeElement = document.getElementById('vp-walking-time');
+    if (!walkingTimeElement) return;
+    
+    const places = data.places || [];
+    if (places.length > 0 && places[0].duration) {
+      walkingTimeElement.textContent = `${places[0].duration} Fußweg zum nächsten Geschäft`;
+    } else if (places.length > 0 && places[0].distance) {
+      walkingTimeElement.textContent = `${places[0].distance} zum nächsten Geschäft`;
+    } else {
+      walkingTimeElement.textContent = '';
+    }
+  }
 
   // Helper function to get time until next opening
   function getTimeUntilOpening(opening_hours) {
@@ -498,8 +523,19 @@
     const container = document.getElementById('vp-places-container');
     if (!container) return;
     
-    const places = data.places || [];
+    let places = data.places || [];
+    
+    // Sort places by distance (nearest first)
+    places = places.sort((a, b) => {
+      const distA = getDistanceValue(a.distance);
+      const distB = getDistanceValue(b.distance);
+      return distA - distB;
+    });
+    
     const maxStores = Math.min(5, places.length);
+    
+    // Update header with walking time
+    updateHeaderWithWalkingTime(data);
     
     if (maxStores === 0) {
       container.innerHTML = `<div style="color: ${C_TEXT_SECONDARY}; text-align: center; padding: 20px;">Keine Geschäfte gefunden</div>`;
@@ -777,12 +813,25 @@
         font-weight: 500;
         letter-spacing: 0.3px;
         padding: 0 20px;
-        width: 100%;
         display: block;
       `;
     textElement.textContent = 'Auf Lager bei einem Local Hero!';
+    
+    // Create walking time estimate element
+    const walkingTimeElement = document.createElement('div');
+    walkingTimeElement.id = 'vp-walking-time';
+    walkingTimeElement.style.cssText = `
+        font-size: 14px;
+        font-weight: 400;
+        color: #666666;
+        padding: 0 20px;
+        margin-top: 4px;
+        display: block;
+      `;
+    walkingTimeElement.textContent = ''; // Will be populated when data loads
 
     textContainer.appendChild(textElement);
+    textContainer.appendChild(walkingTimeElement);
 
     // Create button with lion emoji
     const button = document.createElement('button');
@@ -845,9 +894,8 @@
       country: 'Germany'
     };
     
-    /* IP-based geolocation (disabled)
+    /* 
     try {
-      // Use ipapi.co for IP-based geolocation (free, no API key needed)
       const response = await fetch('https://ipapi.co/json/');
       if (!response.ok) {
         console.log("🦁 IP geolocation request failed");
@@ -904,6 +952,7 @@
         // Update map with user location and data (for first place destination)
         updateMapWithLocation(userLocation, data);
         injectHeroSection(userLocation, data);
+        updateHeaderWithWalkingTime(data);
       }).catch(error => {
         console.error('vom-platzl: error loading data or location:', error);
         const container = document.getElementById('vp-places-container');
