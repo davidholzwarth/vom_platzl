@@ -7,11 +7,16 @@
   const STORE_LATITUDE = 48.1351; // Munich coordinates (default)
   const STORE_LONGITUDE = 11.5820;
 
-  // Brand Colors
-  const C_BLUE_LIGHT = '#1c98d5';
-  const C_BLUE = '#005a9f'
-  const C_BLACK = '#202124';
-  const C_BG_LIGHT = '#FFFDF5';
+  // Modern Brand Colors
+  const C_PRIMARY = '#2563eb';      // Modern blue
+  const C_PRIMARY_LIGHT = '#3b82f6';
+  const C_PRIMARY_DARK = '#1e40af';
+  const C_ACCENT = '#10b981';       // Fresh green
+  const C_BG = '#ffffff';
+  const C_BG_SECONDARY = '#f8fafc';
+  const C_TEXT = '#0f172a';
+  const C_TEXT_SECONDARY = '#64748b';
+  const C_BORDER = '#e2e8f0';
 
   // --- THE HERO SECTION (BRUTE FORCE INJECTION) ---
 
@@ -67,16 +72,18 @@
       max-width: 100%;
       box-sizing: border-box;
       margin: 0 auto;
-      padding: 16px 24px;
-      font-family: arial, sans-serif;
+      padding: 20px 28px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       position: relative;
       z-index: 10;
       display: block;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
+      border: 1px solid ${C_BORDER};
+      border-radius: 12px;
       overflow: hidden;
       overflow-x: hidden;
-      background-color: ${C_BLUE_LIGHT};
+      background: linear-gradient(135deg, ${C_BG} 0%, ${C_BG_SECONDARY} 100%);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     `;
 
     const mapsUrl = `https://www.google.com/maps?q=${STORE_LATITUDE},${STORE_LONGITUDE}`;
@@ -90,20 +97,21 @@
     }
 
     hero.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 20px; max-width: 100%; justify-content: space-between; width: 100%;">
+      <div style="display: flex; align-items: center; gap: 24px; max-width: 100%; justify-content: space-between; width: 100%;">
         <!-- Left: Image -->
         <div style="
-          width: 80px;
-          height: 80px;
-          background: ${C_BG_LIGHT};
-          border: 1px solid #e0e0e0;
-          border-radius: 6px;
+          width: 96px;
+          height: 96px;
+          background: linear-gradient(135deg, ${C_PRIMARY_LIGHT} 0%, ${C_PRIMARY} 100%);
+          border: none;
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 32px;
+          font-size: 48px;
           flex-shrink: 0;
           overflow: hidden;
+          box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
         ">
           ${STORE_IMAGE_URL ?
         `<img src="${STORE_IMAGE_URL}" alt="Store" style="width: 100%; height: 100%; object-fit: cover;" />` :
@@ -112,77 +120,97 @@
         </div>
         
         <!-- Middle: Text Content -->
-        <div style="flex: 1; min-width: 0; max-width: 100%; padding: 0 12px;">
-          <h3 style="
-            margin: 0 0 3px 0;
-            padding: 0;
-            font-size: 16px;
-            font-weight: normal;
-            line-height: 1.2;
+        <div style="flex: 1; min-width: 0; max-width: 100%; padding: 0 16px;">
+          <div style="
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: ${C_ACCENT};
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
           ">
+            <span>✨</span>
+            <span>In deiner Nähe verfügbar</span>
+          </div>
+          
+          <h3 style="
+            margin: 0 0 6px 0;
+            padding: 0;
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.3;
+            color: ${C_TEXT};
+          ">
+            Vom Platzl - Lokale Produkte entdecken
           </h3>
           
           <div style="
-            margin: 0 0 3px 0;
-            font-size: 12px;
-            line-height: 1.2;
-            color: #006621;
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: ${C_TEXT_SECONDARY};
           ">
-            vom-platzl.de › local-scout
+            Finde diese Produkte in Geschäften in deiner Umgebung – schneller und nachhaltiger als Online-Shopping
           </div>
         
           
           <div style="
             display: flex;
-            gap: 8px;
+            gap: 12px;
             align-items: center;
             flex-wrap: wrap;
           ">
             <a href="${mapsUrl}" target="_blank" style="
-              background: ${C_BLACK};
-              color: ${C_BLUE};
+              background: ${C_PRIMARY};
+              color: white;
               text-decoration: none;
-              padding: 6px 12px;
-              border-radius: 20px;
-              font-weight: bold;
-              font-size: 11px;
+              padding: 10px 20px;
+              border-radius: 8px;
+              font-weight: 600;
+              font-size: 14px;
               cursor: pointer;
-              display: inline-block;
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
               white-space: nowrap;
-              transition: background 0.2s;
-            " onmouseover="this.style.background='#303030'" onmouseout="this.style.background='${C_BLACK}'">
-              📍 Open in Maps
+              transition: all 0.2s ease;
+              box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+            " onmouseover="this.style.background='${C_PRIMARY_DARK}'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(37, 99, 235, 0.3)'" onmouseout="this.style.background='${C_PRIMARY}'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(37, 99, 235, 0.2)'">
+              <span>📍</span>
+              <span>Route anzeigen</span>
             </a>
             
             <a href="#" style="
-              color: #1a0dab;
+              color: ${C_PRIMARY};
               text-decoration: none;
-              font-size: 12px;
+              font-size: 14px;
+              font-weight: 500;
               cursor: pointer;
-            " onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-              View Local Map →
-            </a>
-            <span style="color: #70757a;">·</span>
-            <a href="#" style="
-              color: #1a0dab;
-              text-decoration: none;
-              font-size: 12px;
-              cursor: pointer;
-            " onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-              Browse Stores
+              padding: 10px 16px;
+              border-radius: 8px;
+              transition: all 0.2s ease;
+            " onmouseover="this.style.backgroundColor='${C_BG_SECONDARY}'; this.style.textDecoration='none'" onmouseout="this.style.backgroundColor='transparent'; this.style.textDecoration='none'">
+              Alle Geschäfte anzeigen →
             </a>
           </div>
         </div>
         
         <!-- Right: Interactive Route Map -->
         <div class="vp-map" style="
-          width: 280px;
-          max-width: 30%;
-          height: 140px;
-          border: 1px solid #e0e0e0;
-          border-radius: 6px;
+          width: 320px;
+          max-width: 35%;
+          height: 180px;
+          border: 2px solid ${C_BORDER};
+          border-radius: 12px;
           overflow: hidden;
           flex-shrink: 0;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         ">
           <iframe class="vp-iframe"
             src="${embedMapUrl}"
@@ -192,29 +220,71 @@
             allowfullscreen=""
             loading="eager"
             referrerpolicy="no-referrer-when-downgrade"
-            title="${userLocation && userLocation.lat && userLocation.lng ? 'Route to Store' : 'Store Location'}"
+            title="${userLocation && userLocation.lat && userLocation.lng ? 'Route zum Geschäft' : 'Geschäftsstandort'}"
           ></iframe>
         </div>
         <!-- Minimize Button (hidden until expanded) -->
-        <button id="vp-minimize-btn" style="display:none; position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); color:#fff; border:0; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:12px; z-index:20;">Minimize</button>
+        <button id="vp-minimize-btn" style="display:none; position:absolute; top:16px; right:16px; background:${C_PRIMARY}; color:#fff; border:0; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; z-index:20; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);" onmouseover="this.style.background='${C_PRIMARY_DARK}'; this.style.transform='scale(1.05)'" onmouseout="this.style.background='${C_PRIMARY}'; this.style.transform='scale(1)'">✕ Schließen</button>
       </div>
     `;
 
     // Wrap the hero in the full-width wrapper
     wrapper.appendChild(hero);
 
-    // Add minimal CSS for expanded state (idempotent)
+    // Add modern CSS for expanded state and hover effects
     if (!document.getElementById('vom-platzl-vp-styles')) {
       const style = document.createElement('style');
       style.id = 'vom-platzl-vp-styles';
       style.textContent = `
-        #${HERO_ID} { transition: all 220ms ease-in-out; cursor: pointer; }
-        #${HERO_ID}.vp-expanded { width: 100% !important; background-color: ${C_BG_LIGHT} !important; padding: 20px 28px !important; }
-        #${HERO_ID} .vp-map { transition: all 220ms ease-in-out; }
-        #${HERO_ID}.vp-expanded .vp-map { width: 60% !important; height: 340px !important; max-width: none !important; }
-        #vp-minimize-btn { transition: opacity 160ms ease-in-out; }
+        #${HERO_ID} { 
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+        }
+        #${HERO_ID}:hover { 
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          transform: translateY(-2px);
+        }
+        #${HERO_ID}.vp-expanded { 
+          width: 100% !important;
+          background: linear-gradient(135deg, ${C_BG} 0%, ${C_BG_SECONDARY} 100%) !important;
+          padding: 32px 40px !important;
+          cursor: default;
+          transform: translateY(0) !important;
+        }
+        #${HERO_ID}.vp-expanded:hover {
+          transform: translateY(0) !important;
+        }
+        #${HERO_ID} .vp-map { 
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #${HERO_ID}.vp-expanded .vp-map { 
+          width: 65% !important;
+          height: 420px !important;
+          max-width: none !important;
+        }
+        #vp-minimize-btn { 
+          transition: all 0.2s ease;
+        }
         /* When the wrapper is marked expanded, span more grid columns */
-        .vp-wrapper.vp-expanded { grid-column: 2 / span 20 !important; }
+        .vp-wrapper.vp-expanded { 
+          grid-column: 2 / span 20 !important;
+        }
+        
+        /* Smooth animations for all interactive elements */
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        #${HERO_ID} {
+          animation: slideIn 0.4s ease-out;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -318,29 +388,36 @@ function insertTestBanner() {
   const banner = document.createElement("div");
   banner.id = "local-booster-test-banner";
 
-  banner.textContent = "Test Banner – Your Shopping Enhancement is Active";
+  banner.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+      <span style="font-size: 20px;">✅</span>
+      <span>Vom Platzl Extension aktiv – Lokale Produkte werden hervorgehoben</span>
+    </div>
+  `;
 
-  // Basic styling so it looks like a real banner
+  // Modern banner styling
   Object.assign(banner.style, {
     position: "fixed",
     top: "0",
     left: "0",
     width: "100%",
-    padding: "12px 16px",
-    background: "#ffcc00",
-    color: "#000",
-    fontSize: "16px",
-    fontWeight: "bold",
+    padding: "14px 20px",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    color: "#ffffff",
+    fontSize: "15px",
+    fontWeight: "600",
     textAlign: "center",
-    zIndex: "999999",        // Ensure it's above everything
-    borderBottom: "2px solid #000",
-    fontFamily: "Arial, sans-serif"
+    zIndex: "999999",
+    borderBottom: "none",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+    backdropFilter: "blur(10px)"
   });
 
   document.body.appendChild(banner);
 
   // Push page content down so banner doesn't cover it
-  document.body.style.marginTop = "50px";
+  document.body.style.marginTop = "52px";
 }
 
 
