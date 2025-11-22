@@ -106,7 +106,7 @@ def get_place_details(place_id, api_key):
     url = "https://maps.googleapis.com/maps/api/place/details/json"
     params = {
         "place_id": place_id,
-        "fields": "opening_hours,reviews,rating,user_ratings_total",
+        "fields": "opening_hours,reviews,rating,user_ratings_total,url",
         "key": api_key
     }
     try:
@@ -123,9 +123,9 @@ def get_nearby_places(lat, lon, place_type: StoreType, radius=1000):
     # Check cache
     cache_key = f"google_places:{lat}:{lon}:{place_type_val}:{radius}"
     cached_places = redis_client.get(cache_key)
-    # if cached_places:
-    #     print('============== CACHE HIT ==============')
-    #     return json.loads(cached_places)
+    if cached_places:
+        print('============== CACHE HIT ==============')
+        return json.loads(cached_places)
 
     print('============== CACHE MISS ==============')
 
@@ -187,7 +187,8 @@ def get_nearby_places(lat, lon, place_type: StoreType, radius=1000):
                     "rating": result.get("rating"),
                     "user_ratings_total": result.get("user_ratings_total"),
                     "opening_hours": details.get("opening_hours", {}),
-                    "reviews": details.get("reviews", [])
+                    "reviews": details.get("reviews", []),
+                    "google_maps_url": details.get("url", f"https://www.google.com/maps/search/?api=1&query={name}&query_place_id={place_id}")
                 }
                 places.append(place)
         

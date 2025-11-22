@@ -20,6 +20,29 @@
 
   // --- THE HERO SECTION (BRUTE FORCE INJECTION) ---
 
+
+  BACKEND_URL = 'http://localhost:8000'
+
+  async function getData(query, ip, address) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { action: 'fetchData', query, ip, address },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Runtime error:', chrome.runtime.lastError);
+            resolve(null);
+          } else if (response && response.success) {
+            resolve(response.data);
+          } else {
+            console.error('API error:', response ? response.error : 'Unknown error');
+            resolve(null);
+          }
+        }
+      );
+    });
+  }
+
+
   // Google Maps Embed API with Directions
   function getDirectionsEmbedUrl(userLat, userLng) {
     // Interactive Google Maps embed with route directions
@@ -32,7 +55,7 @@
     return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_CONFIG.API_KEY}&q=${STORE_LATITUDE},${STORE_LONGITUDE}&zoom=14`;
   }
 
-  function injectHeroSection(userLocation = null) {
+  function injectHeroSection(userLocation = null, data = null) {
     if (document.getElementById(HERO_ID)) return;
 
     // STRATEGY: Find the main content area, but we'll break out of its constraints
@@ -96,6 +119,16 @@
       embedMapUrl = getStoreEmbedUrl();
     }
 
+    let data_html = `<ul style="list-style-type: disc; padding-left: 20px; margin: 0;">`;
+    const places = data.places || [];
+    const maxStores = Math.min(5, places.length);
+    for (let i = 0; i < maxStores; i++) { 
+      const place = places[i];
+      const element_html = `<li style="margin-bottom: 4px; color: ${C_TEXT};">${place.name || 'Unknown Store'} - ${place.distance || ''}</li>`;
+      data_html += element_html;
+    }
+    data_html += `</ul>`;
+
     hero.innerHTML = `
       <div style="display: flex; align-items: center; gap: 24px; max-width: 100%; justify-content: space-between; width: 100%;">
         <!-- Left: Image -->
@@ -118,6 +151,7 @@
         '🦁'
       }
         </div>
+        ${data_html}
         
         <!-- Middle: Text Content -->
         <div style="flex: 1; min-width: 0; max-width: 100%; padding: 0 16px;">
@@ -329,6 +363,16 @@
 
   // --- RUNNER ---
 
+  function getGoogleSearchQuery() {
+    // 1. Primary: URL Query Parameter (Most accurate for current results)
+    const urlParams = new URLSearchParams(window.location.search);
+    console.log(urlParams)
+    if (urlParams.has('q')) {
+      return urlParams.get('q');
+    }
+    return null;
+  }
+
   function getUserLocation() {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
@@ -358,8 +402,16 @@
     const shoppingIntent = isLikelyShoppingPage(document.body);
     if (shoppingIntent) {
       console.log('vom-platzl: shoppingIntent=true — injecting hero section');
+
+      const query = getGoogleSearchQuery();
+      console.log('vom-platzl: query extracted:', query);
+
+      // Pass query and hardcoded IP
+      const data = await getData(query, '8.8.8.8', '')
+      console.log('vom-platzl: backend data received:', data);
+
       const userLocation = await getUserLocation();
-      injectHeroSection(userLocation);
+      injectHeroSection(userLocation, data);
     } else {
       // remove existing hero if present
       const existing = document.getElementById(HERO_ID);
