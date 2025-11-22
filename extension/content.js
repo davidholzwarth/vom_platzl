@@ -49,11 +49,14 @@
     const wrapper = document.createElement('div');
     wrapper.style.cssText = `
       width: 100%;
+      grid-column: 2 / span 12;
       position: relative;
       margin-bottom: 20px;
       box-sizing: border-box;
       overflow-x: hidden;
     `;
+    // Give the wrapper a stable class so we can adjust its grid placement when expanded
+    wrapper.classList.add('vp-wrapper');
 
     // Create the search result block (styled like Google search results)
     const hero = document.createElement('div');
@@ -210,6 +213,8 @@
         #${HERO_ID} .vp-map { transition: all 220ms ease-in-out; }
         #${HERO_ID}.vp-expanded .vp-map { width: 60% !important; height: 340px !important; max-width: none !important; }
         #vp-minimize-btn { transition: opacity 160ms ease-in-out; }
+        /* When the wrapper is marked expanded, span more grid columns */
+        .vp-wrapper.vp-expanded { grid-column: 2 / span 20 !important; }
       `;
       document.head.appendChild(style);
     }
@@ -220,6 +225,8 @@
       // If already expanded and user clicks hero, do nothing (minimize only via button)
       if (!hero.classList.contains('vp-expanded')) {
         hero.classList.add('vp-expanded');
+        // also mark the wrapper as expanded so we can change its grid-column
+        wrapper.classList.add('vp-expanded');
         const minBtn = hero.querySelector('#vp-minimize-btn');
         if (minBtn) minBtn.style.display = 'block';
       }
@@ -231,6 +238,8 @@
       minBtn.addEventListener('click', function (ev) {
         ev.stopPropagation();
         hero.classList.remove('vp-expanded');
+        // remove expanded marker from wrapper so grid placement reverts
+        wrapper.classList.remove('vp-expanded');
         // restore small map sizing (inline fallback)
         const map = hero.querySelector('.vp-map');
         if (map) {
@@ -244,7 +253,7 @@
     // THE BRUTE FORCE: Insert as the very first child of the target
     // This pushes everything else down.
     const body = document.body
-    mainContent.prepend(wrapper);
+    mainContent.parentElement.prepend(wrapper);
     console.log("🦁 Vom Platzl: Search result block injected into", mainContent);
   }
 
