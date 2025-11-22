@@ -57,7 +57,16 @@
   }
 
   function injectHeroSection(userLocation = null, data = null) {
-    if (document.getElementById(HERO_ID)) return;
+    const existingHero = document.getElementById(HERO_ID);
+    
+    // If hero already exists and we have data, just update it
+    if (existingHero && data) {
+      updateHeroWithData(data);
+      return;
+    }
+    
+    // If hero already exists, don't inject again
+    if (existingHero) return;
 
     // STRATEGY: Find the main content area, but we'll break out of its constraints
     // #center_col = The main center column in standard Search
@@ -120,15 +129,8 @@
       embedMapUrl = getStoreEmbedUrl();
     }
 
-    let data_html = `<ul style="list-style-type: disc; padding-left: 20px; margin: 0;">`;
-    const places = data.places || [];
-    const maxStores = Math.min(5, places.length);
-    for (let i = 0; i < maxStores; i++) {
-      const place = places[i];
-      const element_html = `<li style="margin-bottom: 4px; color: ${C_TEXT};">${place.name || 'Unknown Store'} - ${place.distance || ''}</li>`;
-      data_html += element_html;
-    }
-    data_html += `</ul>`;
+    // Initial loading state
+    let data_html = `<div id="vp-places-container" style="color: ${C_TEXT_SECONDARY}; font-style: italic;">Lädt Geschäfte...</div>`;
 
     hero.innerHTML = `
       <div style="display: flex; align-items: center; gap: 24px; max-width: 100%; justify-content: space-between; width: 100%;">
@@ -407,6 +409,33 @@
     const body = document.body
     mainContent.parentElement.prepend(wrapper);
     console.log("🦁 Vom Platzl: Search result block injected into", mainContent);
+    
+    // If we already have data, update immediately
+    if (data) {
+      updateHeroWithData(data);
+    }
+  }
+  
+  function updateHeroWithData(data) {
+    const container = document.getElementById('vp-places-container');
+    if (!container) return;
+    
+    let data_html = `<ul style="list-style-type: disc; padding-left: 20px; margin: 0;">`;
+    const places = data.places || [];
+    const maxStores = Math.min(5, places.length);
+    
+    if (maxStores === 0) {
+      data_html = `<div style="color: ${C_TEXT_SECONDARY};">Keine Geschäfte gefunden</div>`;
+    } else {
+      for (let i = 0; i < maxStores; i++) {
+        const place = places[i];
+        const element_html = `<li style="margin-bottom: 4px; color: ${C_TEXT};">${place.name || 'Unknown Store'} - ${place.distance || ''}</li>`;
+        data_html += element_html;
+      }
+      data_html += `</ul>`;
+    }
+    
+    container.innerHTML = data_html;
   }
 
   function injectStickyHeader() {
@@ -552,13 +581,22 @@
       injectStickyHeader();
 
       const query = getGoogleSearchQuery();
-
-      // Pass query and hardcoded IP
-      const data = await getData(query, '8.8.8.8', '')
-      console.log('vom-platzl: backend data received:', data);
-
       const userLocation = await getUserLocation();
-      injectHeroSection(userLocation, data);
+      
+      // Inject hero section immediately (with loading state)
+      injectHeroSection(userLocation, null);
+      
+      // Load data asynchronously and update when ready
+      getData(query, '8.8.8.8', '').then(data => {
+        console.log('vom-platzl: backend data received:', data);
+        injectHeroSection(userLocation, data);
+      }).catch(error => {
+        console.error('vom-platzl: error loading data:', error);
+        const container = document.getElementById('vp-places-container');
+        if (container) {
+          container.innerHTML = `<div style="color: ${C_TEXT_SECONDARY};">Fehler beim Laden der Geschäfte</div>`;
+        }
+      });
     } else {
       // remove existing hero if present
       const existing = document.getElementById(HERO_ID);
