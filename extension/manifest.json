@@ -14,5 +14,11 @@
       "matches": ["https://www.google.com/*", "http://www.google.com/*"],
       "js": ["content.js"]
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["query_analysis.js"],
+      "matches": ["<all_urls>"]
+    }
   ]
 }
