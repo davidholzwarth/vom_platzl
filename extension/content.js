@@ -1051,23 +1051,14 @@ function isLikelyShoppingPage(root = document.body) {
   try {
     // 1. Check the URL for explicit shopping indicators
     const url = (location && location.href) ? location.href.toLowerCase() : '';
-    if (url.includes('/shopping') || url.includes('tbm=shop')) return true;
+    const urlClue = url.includes('/shopping') || url.includes('tbm=shop');
+    console.log('shopping_intent: URL clue =', urlClue);
+    if (urlClue) return true;
 
     // 2. Look for shopping-specific UI elements (localized text or known containers)
     const sponsoredLabel = findElementContainingText("gesponserte produkte", root) || findElementContainingText("sponsored products", root);
+    console.log('shopping_intent: sponsored label found =', !!sponsoredLabel);
     if (sponsoredLabel) return true;
-
-    const selectors = [
-      '.sh-dgr__grid-result',
-      '.sh-dlr__list-result',
-      'g-inner-card',
-      '[data-attrid^="shopping_results"]',
-      '[data-attrid*="product"]',
-      'a[href*="/shopping"]'
-    ];
-    for (const sel of selectors) {
-      if (root.querySelector && root.querySelector(sel)) return true;
-    }
 
     return false;
   } catch (e) {
