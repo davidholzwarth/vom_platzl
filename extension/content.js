@@ -174,19 +174,61 @@
     const rules = await fetchRules();
     if (!rules || rules.length === 0) return;
 
-    const productTexts = collectProductTexts();
-    const matches = matchRules(productTexts, rules);
-    if (matches.length > 0) {
-      console.log('vom-platzl: matches found', matches);
-      injectBanner(matches);
+    // Per-card matching: find product cards and insert inline banner for matching cards
+    const cardSelectors = ['data-product-title'];
+    const cards = Array.from(document.querySelectorAll(cardSelectors.join(','))).filter(Boolean);
+
+    if (cards.length === 0) {
+      // fallback to global text scan
+      const productTexts = collectProductTexts();
+      const matches = matchRules(productTexts, rules);
+      if (matches.length > 0) {
+        console.log('vom-platzl: matches found (global)', matches);
+        injectBanner(matches);
+      } else {
+        const existing = document.getElementById(BANNER_ID);
+        if (existing) {
+          existing.remove();
+          document.documentElement.style.paddingTop = '';
+        }
+        console.log('vom-platzl: no matches (checked', productTexts.length, 'texts)');
+      }
+      return;
+    }
+
+    // iterate cards and check title against rules
+    const loweredRules = rules.map(r => (r || '').toLowerCase());
+    let anyCardMatch = false;
+    cards.forEach(card => {
+      const title = extractTitleFromCard(card);
+      if (!title) return;
+      const ltitle = title.toLowerCase();
+      const matched = loweredRules.filter(rule => rule && ltitle.includes(rule));
+      // remove any previous per-card banners first
+      const prev = card.querySelector('.vom-platzl-card-banner');
+      if (prev) prev.remove();
+      if (matched.length > 0) {
+        anyCardMatch = true;
+        insertBannerIntoCard(card, matched, title);
+      }
+    });
+
+    // If at least one card matched, also keep the global top banner for visibility
+    if (anyCardMatch) {
+      console.log('vom-platzl: inserted per-card banners');
+      // assemble global match summary (unique rules matched)
+      const allMatchedRules = Array.from(new Set([].concat(...cards.map(c => {
+        const t = extractTitleFromCard(c); if (!t) return []; const l = t.toLowerCase(); return loweredRules.filter(rule => rule && l.includes(rule));
+      }))));
+      if (allMatchedRules.length > 0) injectBanner(allMatchedRules.map(r => ({rule: r, text: ''})));
     } else {
-      // remove existing banner if present and no matches
+      // remove global banner if none matched
       const existing = document.getElementById(BANNER_ID);
       if (existing) {
         existing.remove();
         document.documentElement.style.paddingTop = '';
       }
-      console.log('vom-platzl: no matches (checked', productTexts.length, 'texts)');
+      console.log('vom-platzl: no per-card matches');
     }
   }
 
@@ -333,6 +375,52 @@
     }
   }
 
+  // Evaluate an XPath expression and return an array of matched nodes
+  function evaluateXPath(xpath) {
+    try {
+      const result = [];
+      const xpathResult = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+      for (let i = 0; i < xpathResult.snapshotLength; i++) {
+        result.push(xpathResult.snapshotItem(i));
+      }
+      return result;
+    } catch (e) {
+      console.warn('vom-platzl: invalid xpath', xpath, e);
+      return [];
+    }
+  }
+
+  // Highlight all nodes returned by an XPath query (make orange for testing)
+  function highlightXPath(xpath, options = {}) {
+    const color = options.color || 'orange';
+    const className = 'vom-platzl-xpath-highlight';
+    // remove previous highlights if any
+    document.querySelectorAll(`.${className}`).forEach(n => {
+      try { n.classList.remove(className); n.style.outline = ''; n.style.background = ''; } catch (e) {}
+    });
+
+    const nodes = evaluateXPath(xpath);
+    if (!nodes || nodes.length === 0) {
+      console.log('vom-platzl: highlightXPath found no nodes for', xpath);
+      return nodes;
+    }
+
+    nodes.forEach(node => {
+      try {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          node.classList.add(className);
+          // apply inline styling to make the element clearly visible
+          node.style.background = color;
+          node.style.outline = '2px solid #b35f00';
+        }
+      } catch (e) {
+        console.warn('vom-platzl: failed to style node', e);
+      }
+    });
+    console.log('vom-platzl: highlightXPath styled', nodes.length, 'nodes for', xpath);
+    return nodes;
+  }
+
   // expose a small dev API so you can change rules and trigger runs from the console
   try {
     window.vomPlatzl = window.vomPlatzl || {};
@@ -342,6 +430,10 @@
       console.log('vom-platzl: testRules updated', testRules);
     };
     window.vomPlatzl.run = run;
+    // expose xpath highlighter
+    window.vomPlatzl.highlightXPath = function (xpath, opts) { return highlightXPath(xpath, opts); };
+    // run a default highlight for the requested xpath (make elements orange) for quick testing
+    try { highlightXPath('/html/body/div[3]/div[2]/div[4]'); } catch (e) {}
   } catch (e) {
     // ignore in strict environments
   }
