@@ -123,9 +123,14 @@
 
     // Generate interactive map embed URL with route
     let embedMapUrl;
-    if (userLocation && userLocation.lat && userLocation.lng) {
-      // Get first place destination if data is available
-      const firstPlace = data && data.places && data.places.length > 0 ? data.places[0] : null;
+    if (userLocation && userLocation.lat && userLocation.lng && data && data.places && data.places.length > 0) {
+      // Sort places by distance to get the nearest one
+      let sortedPlaces = [...data.places].sort((a, b) => {
+        const distA = getDistanceValue(a.distance);
+        const distB = getDistanceValue(b.distance);
+        return distA - distB;
+      });
+      const firstPlace = sortedPlaces[0];
       const destLat = firstPlace ? firstPlace.lat : null;
       const destLng = firstPlace ? firstPlace.lon : null;
       embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
@@ -751,15 +756,23 @@
     const iframe = document.querySelector('#vom-platzl-hero-section .vp-iframe');
     if (!iframe) return;
     
-    // Get first place destination if data is available
-    const firstPlace = data && data.places && data.places.length > 0 ? data.places[0] : null;
+    // Sort places by distance first to match the displayed list
+    let places = data.places || [];
+    places = places.sort((a, b) => {
+      const distA = getDistanceValue(a.distance);
+      const distB = getDistanceValue(b.distance);
+      return distA - distB;
+    });
+    
+    // Get first place destination after sorting
+    const firstPlace = places.length > 0 ? places[0] : null;
     const destLat = firstPlace ? firstPlace.lat : null;
     const destLng = firstPlace ? firstPlace.lon : null;
     
     // Update iframe with directions from user location to first place
     const embedMapUrl = getDirectionsEmbedUrl(userLocation.lat, userLocation.lng, destLat, destLng);
     iframe.src = embedMapUrl;
-    console.log("🦁 Vom Platzl: Map updated with user location and first place destination");
+    console.log("🦁 Vom Platzl: Map updated with user location and first place destination (sorted by distance)");
   }
 
   function injectStickyHeader() {
