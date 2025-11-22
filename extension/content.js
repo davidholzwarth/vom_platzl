@@ -166,7 +166,7 @@
             align-items: center;
             flex-wrap: wrap;
           ">
-            <a href="${mapsUrl}" target="_blank" style="
+            <a href="${mapsUrl}" target="_blank" class="vp-primary-btn" style="
               background: ${C_PRIMARY};
               color: white;
               text-decoration: none;
@@ -181,12 +181,12 @@
               white-space: nowrap;
               transition: all 0.2s ease;
               box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
-            " onmouseover="this.style.background='${C_PRIMARY_DARK}'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(37, 99, 235, 0.3)'" onmouseout="this.style.background='${C_PRIMARY}'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(37, 99, 235, 0.2)'">
+            ">
               <span>📍</span>
               <span>Route anzeigen</span>
             </a>
             
-            <a href="#" style="
+            <a href="#" class="vp-secondary-btn" style="
               color: ${C_PRIMARY};
               text-decoration: none;
               font-size: 14px;
@@ -195,41 +195,90 @@
               padding: 10px 16px;
               border-radius: 8px;
               transition: all 0.2s ease;
-            " onmouseover="this.style.backgroundColor='${C_BG_SECONDARY}'; this.style.textDecoration='none'" onmouseout="this.style.backgroundColor='transparent'; this.style.textDecoration='none'">
+            ">
               Alle Geschäfte anzeigen →
             </a>
           </div>
         </div>
         
-        <!-- Right: Interactive Route Map -->
-        <div class="vp-map" style="
-          width: 320px;
-          max-width: 35%;
-          height: 180px;
-          border: 2px solid ${C_BORDER};
-          border-radius: 12px;
-          overflow: hidden;
-          flex-shrink: 0;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        ">
-          <iframe class="vp-iframe"
-            src="${embedMapUrl}"
-            width="100%"
-            height="100%"
-            style="border:0;"
-            allowfullscreen=""
-            loading="eager"
-            referrerpolicy="no-referrer-when-downgrade"
-            title="${userLocation && userLocation.lat && userLocation.lng ? 'Route zum Geschäft' : 'Geschäftsstandort'}"
-          ></iframe>
-        </div>
-        <!-- Minimize Button (hidden until expanded) -->
-        <button id="vp-minimize-btn" style="display:none; position:absolute; top:16px; right:16px; background:${C_PRIMARY}; color:#fff; border:0; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; z-index:20; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);" onmouseover="this.style.background='${C_PRIMARY_DARK}'; this.style.transform='scale(1.05)'" onmouseout="this.style.background='${C_PRIMARY}'; this.style.transform='scale(1)'">✕ Schließen</button>
       </div>
+      
+      <!-- Expanded Content (hidden until expanded) -->
+      <div class="vp-expanded-section" style="display: none; margin-top: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start;">
+          <!-- Left: Empty placeholder -->
+          <div class="vp-placeholder" style="min-height: 400px;">
+            <!-- Empty space -->
+          </div>
+          
+          <!-- Right: Interactive Route Map -->
+          <div class="vp-map" style="
+            width: 100%;
+            height: 400px;
+            border: 2px solid ${C_BORDER};
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          ">
+            <iframe class="vp-iframe"
+              src="${embedMapUrl}"
+              width="100%"
+              height="100%"
+              style="border:0;"
+              allowfullscreen=""
+              loading="eager"
+              referrerpolicy="no-referrer-when-downgrade"
+              title="${userLocation && userLocation.lat && userLocation.lng ? 'Route zum Geschäft' : 'Geschäftsstandort'}"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Minimize Button (hidden until expanded) -->
+      <button id="vp-minimize-btn" class="vp-close-btn" style="display:none; position:absolute; top:16px; right:16px; background:${C_PRIMARY}; color:#fff; border:0; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; z-index:20; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);">✕ Schließen</button>
     `;
 
     // Wrap the hero in the full-width wrapper
     wrapper.appendChild(hero);
+
+    // Add event listeners for buttons (CSP-compliant)
+    const primaryBtn = hero.querySelector('.vp-primary-btn');
+    if (primaryBtn) {
+      primaryBtn.addEventListener('mouseenter', function() {
+        this.style.background = C_PRIMARY_DARK;
+        this.style.transform = 'translateY(-1px)';
+        this.style.boxShadow = '0 4px 8px rgba(37, 99, 235, 0.3)';
+      });
+      primaryBtn.addEventListener('mouseleave', function() {
+        this.style.background = C_PRIMARY;
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.2)';
+      });
+    }
+
+    const secondaryBtn = hero.querySelector('.vp-secondary-btn');
+    if (secondaryBtn) {
+      secondaryBtn.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = C_BG_SECONDARY;
+        this.style.textDecoration = 'none';
+      });
+      secondaryBtn.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = 'transparent';
+        this.style.textDecoration = 'none';
+      });
+    }
+
+    const closeBtn = hero.querySelector('.vp-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('mouseenter', function() {
+        this.style.background = C_PRIMARY_DARK;
+        this.style.transform = 'scale(1.05)';
+      });
+      closeBtn.addEventListener('mouseleave', function() {
+        this.style.background = C_PRIMARY;
+        this.style.transform = 'scale(1)';
+      });
+    }
 
     // Add modern CSS for expanded state and hover effects
     if (!document.getElementById('vom-platzl-vp-styles')) {
@@ -254,13 +303,16 @@
         #${HERO_ID}.vp-expanded:hover {
           transform: translateY(0) !important;
         }
-        #${HERO_ID} .vp-map { 
+        
+        /* Expanded section is hidden by default */
+        #${HERO_ID} .vp-expanded-section { 
+          display: none !important;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #${HERO_ID}.vp-expanded .vp-map { 
-          width: 65% !important;
-          height: 420px !important;
-          max-width: none !important;
+        
+        /* Show expanded section when expanded */
+        #${HERO_ID}.vp-expanded .vp-expanded-section { 
+          display: block !important;
         }
         #vp-minimize-btn { 
           transition: all 0.2s ease;
