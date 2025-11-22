@@ -24,10 +24,10 @@
 
   BACKEND_URL = 'http://localhost:8000'
 
-  async function getData(query, ip, address) {
+  async function getData(query, lat, lon) {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(
-        { action: 'fetchData', query, ip, address },
+        { action: 'fetchData', query, lat, lon },
         (response) => {
           if (chrome.runtime.lastError) {
             console.error('Runtime error:', chrome.runtime.lastError);
@@ -42,7 +42,6 @@
       );
     });
   }
-
 
   // Google Maps Embed API with Directions
   function getDirectionsEmbedUrl(userLat, userLng) {
@@ -857,7 +856,7 @@
       // Inject hero section immediately (with loading state, no location yet)
       injectHeroSection(null, null);
       
-      // Load user location and data asynchronously
+      // Load user location first, then fetch data with location
       let userLocation = null;
       
       getUserLocation().then(location => {
@@ -865,16 +864,17 @@
         userLocation = location;
         // Update map with user location if we have it
         updateMapWithLocation(location);
-      }).catch(error => {
-        console.error('vom-platzl: error loading location:', error);
-      });
-      
-      // Load data asynchronously and update when ready
-      getData(query, '8.8.8.8', '').then(data => {
+        
+        // Load data with user location coordinates
+        const lat = location ? location.lat : null;
+        const lng = location ? location.lng : null;
+        
+        return getData(query, lat, lng);
+      }).then(data => {
         console.log('vom-platzl: backend data received:', data);
         injectHeroSection(userLocation, data);
       }).catch(error => {
-        console.error('vom-platzl: error loading data:', error);
+        console.error('vom-platzl: error loading data or location:', error);
         const container = document.getElementById('vp-places-container');
         if (container) {
           container.innerHTML = `<div style="color: ${C_TEXT_SECONDARY};">Fehler beim Laden der Geschäfte</div>`;
