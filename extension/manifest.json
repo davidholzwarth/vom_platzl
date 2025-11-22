@@ -13,7 +13,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.google.com/*", "http://www.google.com/*"],
-      "js": ["config.js", "content.js"]
+      "js": ["config.js", "get_data.js", "content.js"]
     }
   ],
   "web_accessible_resources": [
