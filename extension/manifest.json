@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Vom Platzl Shopping Banner",
+  "name": "Vom Platzl - Buy Locally",
   "version": "0.1.0",
   "description": "Shows a banner on Google Shopping when certain products are present.",
   "permissions": ["storage", "activeTab", "scripting"],
