@@ -666,18 +666,36 @@
               color: ${openNow ? '#2e7d32' : '#c62828'};
             ">${openNow ? 'Jetzt geöffnet' : getTimeUntilOpening(place.opening_hours)}</span>
           </div>
+          ` : ''}
           
+          ${place.reviews && place.reviews.length > 0 ? (() => {
+            // Find the most positive review (highest rating)
+            const bestReview = place.reviews.reduce((best, current) => {
+              const currentRating = current.rating || 0;
+              const bestRating = best.rating || 0;
+              return currentRating > bestRating ? current : best;
+            });
+            return `
           <div style="
             font-size: 13px;
             color: ${C_TEXT_SECONDARY};
             margin-bottom: 12px;
+            padding: 12px 16px;
+            background: ${C_BG_SECONDARY};
+            border-radius: 10px;
+            border-left: 4px solid ${C_PRIMARY};
           ">
-            <div style="font-weight: 600; margin-bottom: 6px; color: ${C_TEXT};">Öffnungszeiten</div>
-            ${place.opening_hours.weekday_text ? place.opening_hours.weekday_text.map(day => 
-              `<div style="padding: 2px 0; padding-left: 16px;">${day}</div>`
-            ).join('') : ''}
-          </div>
-          ` : `
+            <div style="font-weight: 600; margin-bottom: 8px; color: ${C_TEXT};">
+              ${'★'.repeat(bestReview.rating || 0)}${'☆'.repeat(5 - (bestReview.rating || 0))} 
+              <span style="margin-left: 8px; color: ${C_TEXT_SECONDARY};">${bestReview.author_name || 'Anonymer Nutzer'}</span>
+            </div>
+            <div style="
+              font-style: italic;
+              line-height: 1.4;
+              color: ${C_TEXT};
+            ">"${bestReview.text || 'Keine Bewertung verfügbar'}"</div>
+          </div>`;
+          })() : `
           <div style="
             font-size: 13px;
             color: ${C_TEXT_SECONDARY};
@@ -686,7 +704,7 @@
             padding: 8px 12px;
             background: ${C_BG_SECONDARY};
             border-radius: 8px;
-          ">Öffnungszeiten nicht verfügbar</div>
+          ">Keine Bewertungen verfügbar</div>
           `}
           
           <a href="${place.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lon}`}" 
