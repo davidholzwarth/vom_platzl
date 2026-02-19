@@ -2,17 +2,19 @@ import os
 import json
 import requests
 import warnings
-from ..config import redis_client, BLACKLIST, GOOGLE_API_KEY
+from ..config import BLACKLIST, GOOGLE_API_KEY
 from ..utils.geo import get_distance
 from ..enums.StoreTypes import StoreType
+from ..modles.Place import Review, Place
+from typing import List, Dict
 
 
-def process_places(places, user_lat, user_lon):
+def process_places(places_raw, user_lat, user_lon) -> List[Place]:
     """
     Processes and filters raw place results from the Google Places API.
 
     Args:
-        places (list): Raw results from Google.
+        places_raw (list): Raw results from Google.
         user_lat (float): Latitude for distance calculation.
         user_lon (float): Longitude for distance calculation.
 
@@ -20,7 +22,8 @@ def process_places(places, user_lat, user_lon):
         list: Formatted and filtered place data.
     """
     results = []
-    for place in places:
+
+    for place in places_raw:
         name = place.get("displayName", {}).get("text", "Unknown")
 
         words = name.lower().split()
@@ -62,43 +65,52 @@ def process_places(places, user_lat, user_lon):
                 else str(text_obj)
             )
 
-            processed_review = {
-                "author_name": review.get("authorAttribution", {}).get(
-                    "displayName", "Anonymous"
-                ),
-                "text": review_text,
-                "rating": review.get("rating"),
-                "relative_time_description": review.get(
-                    "relativePublishTimeDescription"
-                ),
-                "profile_photo_url": review.get("authorAttribution", {}).get(
-                    "photoUri"
-                ),
-            }
-            processed_reviews.append(processed_review)
+            try:
+                processed_review = Review(
+                    author_name=review.get("authorAttribution", {}).get(
+                        "displayName", "Anonymous"
+                    ),
+                    text=review_text,
+                    rating=review.get("rating"),
+                    relative_time_description=review.get(
+                        "relativePublishTimeDescription"
+                    ),
+                    profile_photo_url=review.get("authorAttribution", {}).get(
+                        "photoUri"
+                    ),
+                )
+                processed_reviews.append(processed_review)
+            except Exception as e:
+                print(f"Error processing review: {e}")
 
-        formatted_place = {
-            "name": name,
-            "type": place.get("types", ["store"])[0] if place.get("types") else "store",
-            "lat": lat_val,
-            "lon": lon_val,
-            "tags": {"name": name, "vicinity": place.get("formattedAddress", "N/A")},
-            "image_url": None,
-            "rating": rating,
-            "user_ratings_total": user_rating_count,
-            "opening_hours": opening_hours,
-            "reviews": processed_reviews,
-            "google_maps_url": place.get(
-                "googleMapsUri", f"https://maps.google.com/?q={lat_val},{lon_val}"
-            ),
-            "website": place.get("websiteUri"),
-            "distance": distance_str,
-        }
-        results.append(formatted_place)
+        try:
+            place_obj = Place(
+                name=name,
+                type=place.get("types", ["store"])[0]
+                if place.get("types")
+                else "store",
+                lat=lat_val,
+                lon=lon_val,
+                tags={"name": name, "vicinity": place.get("formattedAddress", "N/A")},
+                image_url=None,
+                rating=rating,
+                user_ratings_total=user_rating_count,
+                opening_hours=opening_hours,
+                reviews=processed_reviews,
+                google_maps_url=place.get(
+                    "googleMapsUri", f"https://maps.google.com/?q={lat_val},{lon_val}"
+                ),
+                website=place.get("websiteUri"),
+                distance=distance_str,
+            )
+            results.append(place_obj)
+        except Exception as e:
+            print(f"Error processing place: {e}")
+
     return results
 
 
-def search_google_text(lat, lon, query_text, radius=1500):
+def search_google_text(lat, lon, query_text, radius=1500) -> List[Place]:
     """
     Performs a text-based search for places using Google's V1 API.
 
@@ -133,7 +145,7 @@ def search_google_text(lat, lon, query_text, radius=1500):
     try:
         res = requests.post(url, headers=headers, json=body)
         if res.status_code == 200:
-            places_data = res.json().get("places", [])
+            places_data: List[Dict] = res.json().get("places", [])
             return process_places(places_data, lat, lon)
         else:
             print(f"Error searching Google: {res.status_code} {res.text}")
@@ -167,11 +179,6 @@ def get_nearby_places(lat_str, lon_str, place_type: StoreType, radius=1500):
     except ValueError:
         return []
 
-    cache_key = f"google_places_v2:{lat_str}:{lon_str}:{place_type_val}:{radius}"
-    cached_places = redis_client.get(cache_key)
-    if cached_places:
-        return json.loads(cached_places)
-
     url = f"https://places.googleapis.com/v1/places:searchNearby?key={GOOGLE_API_KEY}"
     field_mask = "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount,places.regularOpeningHours,places.reviews,places.websiteUri,places.googleMapsUri"
 
@@ -191,9 +198,8 @@ def get_nearby_places(lat_str, lon_str, place_type: StoreType, radius=1500):
         data = response.json()
         places_data = data.get("places", [])
 
-        processed_places = process_places(places_data, lat, lon)
+        processed_places: List[Place] = process_places(places_data, lat, lon)
 
-        redis_client.setex(cache_key, 3600 * 48, json.dumps(processed_places))
         return processed_places
     except Exception as e:
         print(f"Error querying Google Places API: {e}")

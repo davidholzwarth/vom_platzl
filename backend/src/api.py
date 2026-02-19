@@ -4,6 +4,8 @@ from starlette.middleware.cors import CORSMiddleware
 
 from .classifier import classify_query
 from .services.google_places import search_google_text, get_nearby_places
+from typing import List, Dict
+from .modles.Place import Place
 
 app = FastAPI()
 
@@ -50,7 +52,7 @@ def get_places(
     print(f"Searching for: {query} at {lat_f}, {lon_f}")
 
     # Try Text Search first
-    places = search_google_text(lat_f, lon_f, query, radius=1500)
+    places: List[Place] = search_google_text(lat_f, lon_f, query, radius=1500)
 
     # Fallback to category search if text search returns nothing
     if not places:
@@ -58,7 +60,7 @@ def get_places(
         store_type = classify_query(query)
         places = get_nearby_places(lat, lon, store_type, radius=1500)
 
-    return JSONResponse(content={"places": places})
+    return JSONResponse(content={"places": [p.model_dump() for p in places]})
 
 
 
