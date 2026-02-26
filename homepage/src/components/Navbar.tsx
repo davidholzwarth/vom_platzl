@@ -15,15 +15,19 @@ function Navbar() {
     const { t, i18n } = useTranslation();
     const [langOpen, setLangOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const desktopDropdownRef = useRef<HTMLDivElement>(null);
+    const mobileDropdownRef = useRef<HTMLDivElement>(null);
     const { pathname } = useLocation();
 
-    const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
+    const normalizedLang = i18n.language.split('-')[0];
+    const currentLang = languages.find(l => l.code === normalizedLang) || languages[0];
 
     // Close dropdown on outside click
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+            const inDesktop = desktopDropdownRef.current?.contains(e.target as Node);
+            const inMobile = mobileDropdownRef.current?.contains(e.target as Node);
+            if (!inDesktop && !inMobile) {
                 setLangOpen(false);
             }
         };
@@ -53,7 +57,7 @@ function Navbar() {
                 <Link to="https://github.com/davidholzwarth/vom_platzl" className="text-gray-700 hover:text-orange-500"><FaGithub className="w-5 h-5 inline mr-1" /></Link>
 
                 {/* Language dropdown */}
-                <div className="relative ml-2" ref={dropdownRef}>
+                <div className="relative ml-2" ref={desktopDropdownRef}>
                     <button
                         onClick={() => setLangOpen(!langOpen)}
                         className="flex items-center gap-1.5 px-2.5 py-1 text-sm font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors cursor-pointer"
@@ -70,7 +74,7 @@ function Navbar() {
                                     key={lang.code}
                                     onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
                                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors cursor-pointer ${
-                                        i18n.language === lang.code
+                                        normalizedLang === lang.code
                                             ? 'bg-orange-50 text-orange-600 font-semibold'
                                             : 'text-gray-700 hover:bg-gray-50'
                                     }`}
@@ -87,7 +91,7 @@ function Navbar() {
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center gap-3">
                  {/* Mobile Language selector */}
-                 <div className="relative" ref={dropdownRef}>
+                 <div className="relative" ref={mobileDropdownRef}>
                     <button
                         onClick={() => setLangOpen(!langOpen)}
                         className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-md border border-gray-200 text-gray-700"
@@ -102,10 +106,10 @@ function Navbar() {
                                 <button
                                     key={lang.code}
                                     onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${
-                                        i18n.language === lang.code
+                                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors cursor-pointer ${
+                                        normalizedLang === lang.code
                                             ? 'bg-orange-50 text-orange-600 font-semibold'
-                                            : 'text-gray-700'
+                                            : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                                 >
                                     <span>{lang.flag}</span>
