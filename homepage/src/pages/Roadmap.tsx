@@ -43,7 +43,7 @@ function MilestoneItem({
   return (
     <div
       ref={ref}
-      className={`relative pl-10 pb-14 last:pb-0 transition-all duration-700 ease-out ${
+      className={`relative pl-8 md:pl-10 pb-14 last:pb-0 transition-all duration-700 ease-out ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
       }`}
       style={{ transitionDelay: `${index * 150}ms` }}
@@ -56,7 +56,7 @@ function MilestoneItem({
       />
 
       {/* Title row with date on the right */}
-      <div className="flex items-baseline justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
         <h3 className="text-xl font-bold text-gray-900">{milestone.title}</h3>
         <span className="shrink-0 text-sm text-gray-400">{milestone.date}</span>
       </div>
@@ -74,7 +74,7 @@ function RoadMap() {
   const milestones = t("roadmap.milestones", { returnObjects: true }) as Milestone[];
 
   return (
-    <div className="relative w-full max-w-2xl pt-8 pb-6 ml-4">
+    <div className="relative w-full max-w-2xl pt-8 pb-6 ml-2 md:ml-4">
       {/* Vertical line — stops where the arrowhead begins */}
       <div className="absolute left-0 top-0 w-[2px] bg-orange-500/60" style={{ bottom: "14px" }} />
 

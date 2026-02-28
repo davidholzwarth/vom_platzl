@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
-import { Search, ArrowLeft, Loader2 } from "lucide-react";
+import { Search, ArrowLeft, Loader2, Map as MapIcon, List as ListIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import StoreCard from "@/components/StoreCard";
 import SearchBar from "@/components/SearchBar";
@@ -30,6 +30,7 @@ function SearchResults() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   // Fetch places from backend
   useEffect(() => {
@@ -81,9 +82,9 @@ function SearchResults() {
   const userOrigin = lat && lon ? { lat, lon } : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
       {/* Orange header bar */}
-      <div className="bg-orange-500 text-white px-6 py-8">
+      <div className="bg-orange-500 text-white px-4 md:px-6 py-6 md:py-8">
         <div className="max-w-6xl mx-auto">
           <a
             href="/"
@@ -92,9 +93,6 @@ function SearchResults() {
             <ArrowLeft className="w-4 h-4" />
             {t('search.backToHome')}
           </a>
-          {/* <h1 className="text-3xl md:text-4xl font-bold">
-            
-          </h1> */}
           <SearchBar typeText={false} showLocationStatus={false} value={query} />
           <p className="mt-2 text-white/80 text-sm">
             {isLoading
@@ -105,7 +103,7 @@ function SearchResults() {
       </div>
 
       {/* Main content */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8">
         {isLoading && (
           <div className="flex items-center justify-center py-24 text-gray-400">
             <Loader2 className="w-8 h-8 animate-spin mr-3" />
@@ -128,33 +126,55 @@ function SearchResults() {
         )}
 
         {!isLoading && places.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            {/* Place list */}
-            <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-1">
-              {places.map((place, idx) => (
-                <StoreCard
-                  key={idx}
-                  place={place}
-                  selected={selectedPlace?.lat === place.lat && selectedPlace?.lon === place.lon}
-                  onSelect={(p) => setSelectedPlace(p)}
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              {/* Place list - Hidden on mobile if viewMode is map */}
+              <div className={`flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-1 ${viewMode === 'map' ? 'hidden lg:flex' : 'flex'}`}>
+                {places.map((place, idx) => (
+                  <StoreCard
+                    key={idx}
+                    place={place}
+                    selected={selectedPlace?.lat === place.lat && selectedPlace?.lon === place.lon}
+                    onSelect={(p) => setSelectedPlace(p)}
+                  />
+                ))}
+              </div>
+
+              {/* Map - Hidden on mobile if viewMode is list */}
+              <div className={`sticky top-20 lg:top-6 w-full min-h-[450px] lg:h-[600px] border-2 border-gray-200 rounded-2xl overflow-hidden shadow-sm ${viewMode === 'list' ? 'hidden lg:block' : 'block'}`}>
+                <iframe
+                  src={getDirectionsEmbedUrl(userOrigin, selectedPlace)}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="eager"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title={t('search.mapTitle')}
                 />
-              ))}
+              </div>
             </div>
 
-            {/* Map */}
-            <div className="sticky top-6 w-full min-h-[450px] h-[600px] border-2 border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-              <iframe
-                src={getDirectionsEmbedUrl(userOrigin, selectedPlace)}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="eager"
-                referrerPolicy="no-referrer-when-downgrade"
-                title={t('search.mapTitle')}
-              />
+            {/* Mobile View Toggle FAB */}
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 lg:hidden">
+              <button
+                onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+                className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-full shadow-lg font-bold hover:bg-orange-600 transition-all active:scale-95"
+              >
+                {viewMode === 'list' ? (
+                  <>
+                    <MapIcon className="w-5 h-5" />
+                    <span>{t('search.mapTitle')}</span>
+                  </>
+                ) : (
+                  <>
+                    <ListIcon className="w-5 h-5" />
+                    <span>{t('search.storesFound', { count: places.length })}</span>
+                  </>
+                )}
+              </button>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

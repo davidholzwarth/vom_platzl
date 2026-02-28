@@ -124,7 +124,7 @@ export default function About() {
         {t('about.subtitle')}
       </p>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-10 max-w-4xl mx-auto">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 max-w-4xl mx-auto">
         {teamMembers.map((member, i) => (
           <Profile key={i} {...member} />
         ))}
