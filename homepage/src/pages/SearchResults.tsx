@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
-import { Search, ArrowLeft, Loader2, Map as MapIcon, List as ListIcon } from "lucide-react";
+import { Search, ArrowLeft, Loader2, Map as MapIcon, List as ListIcon, Navigation } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import StoreCard from "@/components/StoreCard";
 import SearchBar from "@/components/SearchBar";
@@ -16,7 +16,21 @@ function getDirectionsEmbedUrl(
   if (origin && dest) {
     return `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=${origin.lat},${origin.lon}&destination=${dest.lat},${dest.lon}&mode=walking&zoom=15`;
   }
+  if (dest) {
+    return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${dest.lat},${dest.lon}&zoom=15`;
+  }
   return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=Munich&zoom=13`;
+}
+
+function getNativeMapsUrl(
+  origin: { lat: string; lon: string } | null,
+  dest: Place | null
+) {
+  if (!dest) return null;
+  if (origin) {
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lon}&destination=${dest.lat},${dest.lon}&travelmode=walking`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${dest.lat},${dest.lon}`;
 }
 
 function SearchResults() {
@@ -141,17 +155,30 @@ function SearchResults() {
               </div>
 
               {/* Map - Hidden on mobile if viewMode is list */}
-              <div className={`sticky top-20 lg:top-6 w-full min-h-[450px] lg:h-[600px] border-2 border-gray-200 rounded-2xl overflow-hidden shadow-sm ${viewMode === 'list' ? 'hidden lg:block' : 'block'}`}>
+              <div className={`sticky top-20 lg:top-6 w-full min-h-[450px] lg:h-[600px] border-2 border-gray-200 rounded-2xl overflow-hidden shadow-sm flex flex-col ${viewMode === 'list' ? 'hidden lg:flex' : 'flex'}`}>
                 <iframe
+                  key={`${selectedPlace?.lat}-${selectedPlace?.lon}`}
                   src={getDirectionsEmbedUrl(userOrigin, selectedPlace)}
                   width="100%"
                   height="100%"
-                  style={{ border: 0 }}
+                  style={{ border: 0, flex: 1 }}
                   allowFullScreen
-                  loading="eager"
+                  loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
+                  allow="geolocation; fullscreen"
                   title={t('search.mapTitle')}
                 />
+                {getNativeMapsUrl(userOrigin, selectedPlace) && (
+                  <a
+                    href={getNativeMapsUrl(userOrigin, selectedPlace)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-white border-t border-gray-200 py-3 text-sm font-semibold text-orange-500 hover:bg-orange-50 transition-colors shrink-0"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    {t('search.openDirections')}
+                  </a>
+                )}
               </div>
             </div>
 

@@ -21,7 +21,8 @@
     "tryAnother": "Try a different search term.",
     "fetchError": "Error loading results",
     "unknownError": "Unknown error",
-    "mapTitle": "Route to store"
+    "mapTitle": "Route to store",
+    "openDirections": "Open directions in Maps"
   },
   "searchBar": {
     "locating": "Determining location...",
