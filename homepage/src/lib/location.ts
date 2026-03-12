@@ -66,33 +66,32 @@ async function getLocationFromIP(): Promise<LocationData> {
   }
 
   try {
-    // Using ip-api.com which is free, supports CORS, and has better rate limits
-    const response = await fetch('http://ip-api.com/json/');
-    
+    // ipwho.is: free, HTTPS (no mixed-content issues), CORS-enabled
+    const response = await fetch('https://ipwho.is/');
+
     if (!response.ok) {
       throw new Error(`IP geolocation failed with status: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
-    if (data.status === 'fail') {
+
+    if (!data.success) {
       throw new Error(data.message || 'IP geolocation failed');
     }
-    
-    const location : LocationData = {
-      latitude: data.lat,
-      longitude: data.lon,
+
+    const location: LocationData = {
+      latitude: data.latitude,
+      longitude: data.longitude,
       source: 'ip',
       city: data.city,
-      region: data.regionName,
-      country: data.country
+      region: data.region,
+      country: data.country,
     };
 
     // Cache the result
     cacheIPLocation(location);
-    
-    return location;
 
+    return location;
   } catch (error) {
     console.error('Failed to get location from IP:', error);
     throw new Error('Could not determine location from IP address');
@@ -100,46 +99,49 @@ async function getLocationFromIP(): Promise<LocationData> {
 }
 
 /**
- * Get location from GPS/browser geolocation API
+ * Get location from GPS/browser geolocation API.
+ * Tries fast low-accuracy first, then upgrades to high-accuracy if needed.
  */
 function getLocationFromGPS(): Promise<LocationData> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation is not supported by your browser'));
-      return;
-    }
+  if (!navigator.geolocation) {
+    return Promise.reject(new Error('Geolocation is not supported by your browser'));
+  }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          source: 'gps'
-        });
-      },
-      (error) => {
-        let errorMessage = 'Failed to get GPS location';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location permission denied';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out';
-            break;
-        }
-        reject(new Error(errorMessage));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  });
+  const makeRequest = (highAccuracy: boolean, timeout: number, maxAge: number) =>
+    new Promise<LocationData>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            source: 'gps',
+          });
+        },
+        (error) => {
+          let errorMessage = 'Failed to get GPS location';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location permission denied';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information unavailable';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out';
+              break;
+          }
+          reject(new Error(errorMessage));
+        },
+        { enableHighAccuracy: highAccuracy, timeout, maximumAge: maxAge }
+      );
+    });
+
+  // First try: fast, allows a cached position up to 30s old, short timeout
+  return makeRequest(false, 5000, 30000).catch(() =>
+    // Second try: high accuracy, no cached position, longer timeout
+    makeRequest(true, 15000, 0)
+  );
 }
 
 /**

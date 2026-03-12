@@ -16,7 +16,7 @@ interface SearchBarProps {
 }
 
 function SearchBar({typeText = true, showLocationStatus = true, value}: SearchBarProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [userLocation, setUserLocation] = useState<LocationData | null>(null);
   const [locationStatusString, setLocationStatusString] = useState(t('searchBar.locating'));
   const [placeholderText, setPlaceholderText] = useState("");
@@ -71,6 +71,7 @@ function SearchBar({typeText = true, showLocationStatus = true, value}: SearchBa
   useEffect(() => {
     if (!showTypeText) return;
 
+    setPlaceholderText("");
     let currentTermIndex = 0;
     let currentCharIndex = 0;
     let isDeleting = false;
@@ -106,7 +107,7 @@ function SearchBar({typeText = true, showLocationStatus = true, value}: SearchBa
     timeout = setTimeout(type, 500);
 
     return () => clearTimeout(timeout);
-  }, [showTypeText]);
+  }, [showTypeText, i18n.language]);
 
   // Blinking cursor effect
   useEffect(() => {
@@ -116,7 +117,7 @@ function SearchBar({typeText = true, showLocationStatus = true, value}: SearchBa
     }, 500);
 
     return () => clearInterval(cursorInterval);
-  }, [showTypeText]);
+  }, [showTypeText, i18n.language]);
   
 
   return (

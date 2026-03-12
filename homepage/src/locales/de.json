@@ -21,7 +21,8 @@
     "tryAnother": "Versuche einen anderen Suchbegriff.",
     "fetchError": "Fehler beim Laden der Ergebnisse",
     "unknownError": "Unbekannter Fehler",
-    "mapTitle": "Route zum Geschäft"
+    "mapTitle": "Route zum Geschäft",
+    "openDirections": "Route in Maps öffnen"
   },
   "searchBar": {
     "locating": "Standort wird ermittelt...",

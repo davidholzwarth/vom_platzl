@@ -62,7 +62,7 @@ export default function StoreCard({ place, selected, onSelect }: StoreCardProps)
   return (
     <div
       onClick={() => onSelect(place)}
-      className={`bg-white border rounded-2xl p-5 shadow-sm transition-all cursor-pointer hover:shadow-md hover:border-orange-300 ${
+      className={`bg-white border rounded-2xl p-4 md:p-5 shadow-sm transition-all cursor-pointer hover:shadow-md hover:border-orange-300 ${
         selected
           ? "border-orange-400 ring-2 ring-orange-200"
           : "border-gray-200"

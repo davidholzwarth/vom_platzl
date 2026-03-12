@@ -28,15 +28,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* <section className="bg-white min-h-[40vh] px-4 py-16 flex flex-col items-center">
-        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4">
-          {t('home.download')}
-        </h2>
-        <p className="text-gray-600 max-w-2xl text-center">
-          {t('home.motivationText')}
-        </p>
-      </section> */}
-
       <section className="bg-white min-h-[40vh] px-4 py-16 flex flex-col items-center">
         <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4">
           {t('home.roadmap')}
